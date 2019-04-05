@@ -14,6 +14,7 @@ include_directories(${MIGRAPHX_FOLDER}/src/include
 		    inc)
 
 link_directories(${MIGRAPHX_BUILD}/src/onnx
+                 ${MIGRAPHX_BUILD}/src/tf
                  ${MIGRAPHX_BUILD}/src
                  ${MIGRAPHX_BUILD}/src/targets/gpu
                  ${MIGRAPHX_BUILD}/src/targets/cpu
@@ -23,4 +24,4 @@ link_directories(${MIGRAPHX_BUILD}/src/onnx
 file(GLOB SRC_FILES "src/*.cpp")
 set(bin_name migx)
 add_executable(${bin_name} ${SRC_FILES})
-target_link_libraries(${bin_name} migraphx migraphx_cpu migraphx_device migraphx_gpu migraphx_onnx hip_hcc MIOpen)
+target_link_libraries(${bin_name} migraphx migraphx_cpu migraphx_device migraphx_gpu migraphx_onnx migraphx_tf hip_hcc MIOpen)
