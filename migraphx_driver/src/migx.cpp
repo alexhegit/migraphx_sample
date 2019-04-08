@@ -27,9 +27,9 @@
 #include <migraphx/gpu/hip.hpp>
 #include <migraphx/generate.hpp>
 #include <migraphx/context.hpp>
+#include "migx.hpp"
 using namespace migraphx;
-
-std::string migx_program;            // argv[0] of this process
+std::string migx_program; // argv[0] of this process
 std::string usage_message =
   migx_program + " <options list>\n" + 
   "where <options list> includes options for\n" +
@@ -39,8 +39,8 @@ std::string usage_message =
   "    loading saved models (either --onnx or --tfpb are required)\n" + 
   "        --onnx=<filename>\n" +
   "        --tfpb=<filename>\n" +
-  "        --nhwc\n             set the data layout (--tfpb only)" +
-  "        --nchw\n             set the data layout (default)" +
+  "        --nhwc               set the data layout (--tfpb only)\n" +
+  "        --nchw               set the data layout (default)\n" +
   "    quantization\n" +
   "        --fp16               quantize operations to float16\n" +
   "        --int8               quantize operations to int8\n" +
@@ -159,7 +159,8 @@ int parse_options(int argc,char *const argv[]){
     return 1;
   }
   if ((run_type == run_imageinfo) && image_filename.empty()){
-    std::cerr << migx_program << ": --imageinfo requires --imagefilename option" << std::endl;
+    std::cerr << migx_program << ": --imageinfo requires --imagefile option" << std::endl;
+    return 1;
   }
   return 0;
 }
@@ -214,18 +215,33 @@ int main(int argc,char *const argv[],char *const envp[]){
 
   // set up the parameter map
   program::parameter_map pmap;
-  for (auto&& x: prog.get_parameter_shapes())
-    pmap[x.first] = migraphx::gpu::to_gpu(generate_argument(x.second));
+  std::cout << "allocating parameters" << std::endl;
+  for (auto&& x: prog.get_parameter_shapes()){
+    //    pmap[x.first] = migraphx::gpu::to_gpu(generate_argument(x.second));
+    pmap[x.first] = migraphx::gpu::allocate_gpu(x.second);
+  }
+  enum image_type img_type;
   int batch_size = pmap[argname].get_shape().lens()[0];
-  
+  int channels = pmap[argname].get_shape().lens()[1]; // TODO: nhwc
+  int height = pmap[argname].get_shape().lens()[2];   //
+  int width = pmap[argname].get_shape().lens()[3];   //
+  if (channels == 3 && height == 224 && width == 224) img_type = image_imagenet224;
+  else if (channels == 3 && height == 299 && width == 299) img_type = image_imagenet299;
+  else img_type = image_unknown;
 
-  // alternatives for running the program
-  if (is_verbose && iterations > 1){
-    std::cout << "running           " << iterations << " iterations" << std::endl;
+  // read image data if passed
+  std::vector<float> image_data(3*height*width);
+  if (!image_filename.empty()){
+    if (is_verbose)
+      std::cout << "reading image: " << image_filename << " " << std::endl;
+    read_image(image_filename,img_type,image_data);
   }
 
-  argument arg = generate_argument(prog.get_parameter_shape(argname));
-  argument result;
+  migraphx::argument result;
+  migraphx::argument resarg;
+  double start_time,finish_time,elapsed_time;
+  int top5[5];
+  // alternatives for running the program
   auto ctx = prog.get_context();
   switch(run_type){
   case run_none:
@@ -233,12 +249,14 @@ int main(int argc,char *const argv[],char *const envp[]){
     break;
   case run_benchmark:
     int i;
-    double start_time,finish_time,elapsed_time;
+    if (is_verbose && iterations > 1){
+      std::cout << "running           " << iterations << " iterations" << std::endl;
+    }
     start_time = get_time();
     for (i = 0;i < iterations;i++){
       if (copyarg)
-	pmap[argname] = migraphx::gpu::to_gpu(arg);
-      auto resarg = prog.eval(pmap);
+	pmap[argname] = migraphx::gpu::to_gpu(generate_argument(prog.get_parameter_shape(argname)));
+      resarg = prog.eval(pmap);
       ctx.finish();
       if (copyarg)
 	result = migraphx::gpu::from_gpu(resarg);
@@ -251,14 +269,26 @@ int main(int argc,char *const argv[],char *const envp[]){
     std::cout << "Images/sec:       " << (iterations*batch_size)/elapsed_time << std::endl;
     break;
   case run_perfreport:
+    if (is_verbose && iterations > 1){
+      std::cout << "running           " << iterations << " iterations" << std::endl;
+    }
     prog.perf_report(std::cout,iterations,pmap);
     break;
   case run_imageinfo:
+    pmap[argname] = migraphx::gpu::to_gpu(migraphx::argument{
+	pmap[argname].get_shape(),image_data.data()});
+    resarg = prog.eval(pmap);
+    result = migraphx::gpu::from_gpu(resarg);
+    image_top5((float *) result.data(), top5);
+    std::cout << "top1 = " << top5[0] << " " << imagenet_labels[top5[0]] << std::endl;
+    std::cout << "top2 = " << top5[1] << " " << imagenet_labels[top5[1]] << std::endl;
+    std::cout << "top3 = " << top5[2] << " " << imagenet_labels[top5[2]] << std::endl;
+    std::cout << "top4 = " << top5[3] << " " << imagenet_labels[top5[3]] << std::endl;
+    std::cout << "top5 = " << top5[4] << " " << imagenet_labels[top5[4]] << std::endl;
     break;
   case run_printmodel:
     std::cout << prog;
     break;
   }
-  
   return 0;
 }
