@@ -20,6 +20,7 @@
 #include <iostream>
 #include <iomanip>
 #include <getopt.h>
+#include <unistd.h>
 #include <sys/time.h>
 #include <migraphx/onnx.hpp>
 #include <migraphx/tf.hpp>
@@ -50,6 +51,7 @@ std::string usage_message =
   "        --perf_report        run migraphx perf report including times per instruction\n" +
   "        --benchmark          run model repeatedly and time results\n" +
   "        --imageinfo          run model once and report top5 buckets for an image\n" +
+  "        --imagenet=<dir>     run model on an imagenet directory\n" +
   "        --print_model        show MIGraphX instructions for model\n" +
   "        --iterations=<n>     set iterations for perf_report and benchmark (default 1000)\n" +
   "        --copyarg            copy arguments in and results back (--benchmark only)\n" +
@@ -61,11 +63,12 @@ enum model_type { model_unknown, model_onnx, model_tfpb } model_type = model_unk
 std::string model_filename;
 bool is_nchw = true;
 enum quantize_type { quantize_none, quantize_fp16, quantize_int8 } quantize_type = quantize_none;
-enum run_type { run_none, run_benchmark, run_perfreport, run_imageinfo, run_printmodel } run_type = run_none;
+enum run_type { run_none, run_benchmark, run_perfreport, run_imageinfo, run_imagenet, run_printmodel } run_type = run_none;
 int iterations = 1000;
 bool copyarg = false;
 std::string argname = "0";
 std::string image_filename;
+std::string imagenet_dir;
 
 /* parse_options
  *
@@ -86,10 +89,11 @@ int parse_options(int argc,char *const argv[]){
     { "benchmark", no_argument,     0, 10 },
     { "perf_report", no_argument,   0, 11 },
     { "imageinfo", no_argument,     0, 12 },
-    { "print_model", no_argument,   0, 13 },
-    { "iterations", required_argument, 0, 14 },
-    { "copyarg", no_argument,     0, 15 },
-    { "argname", required_argument, 0, 16 },
+    { "imagenet", required_argument, 0, 13 },
+    { "print_model", no_argument,   0, 14 },
+    { "iterations", required_argument, 0, 15 },
+    { "copyarg", no_argument,     0, 16 },
+    { "argname", required_argument, 0, 17 },
   };
   while ((opt = getopt_long(argc,argv,"",long_options,NULL)) != -1){
     switch (opt){
@@ -131,19 +135,22 @@ int parse_options(int argc,char *const argv[]){
       run_type = run_imageinfo;
       break;
     case 13:
+      imagenet_dir = optarg;
+      run_type = run_imagenet;
+    case 14:
       run_type = run_printmodel;
       break;
-    case 14:
+    case 15:
       if (std::stoi(optarg) < 0){
 	std::cerr << migx_program << ": iterations < 0, ignored" << std::endl;
       } else {
 	iterations = std::stoi(optarg);
       }
       break;
-    case 15:
+    case 16:
       copyarg = true;
       break;
-    case 16:
+    case 17:
       argname = optarg;
       break;
     default:
@@ -285,6 +292,11 @@ int main(int argc,char *const argv[],char *const envp[]){
     std::cout << "top3 = " << top5[2] << " " << imagenet_labels[top5[2]] << std::endl;
     std::cout << "top4 = " << top5[3] << " " << imagenet_labels[top5[3]] << std::endl;
     std::cout << "top5 = " << top5[4] << " " << imagenet_labels[top5[4]] << std::endl;
+    break;
+  case run_imagenet:
+    if (chdir(imagenet_dir) == -1){
+      std::cerr << migx_program << ": can not change to imagenet dir: " << imagenet_dir << std::endl;
+    }
     break;
   case run_printmodel:
     std::cout << prog;
