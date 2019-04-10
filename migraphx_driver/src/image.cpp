@@ -26,28 +26,51 @@ void read_image(std::string filename,enum image_type etype,std::vector<float> &i
     std::cout << "imagenet ??? " << etype << std::endl;
     break;
   }
-  
+  double mean[3] = { 0.485,0.456,0.406 };
+  double stdev[3] = { 0.229,0.224,0.225 };
   img = imread(filename,CV_LOAD_IMAGE_COLOR);
+  Mat_<Vec3b> _img = img;
+  int pixel_orig0 = _img(0,0)[0];
+  int pixel_orig1 = _img(0,0)[1];
+  int pixel_orig2 = _img(0,0)[2];    
   if (!img.data){
     std::cerr << migx_program << ": unable to load image file " << filename << std::endl;
     return;
   }
   // resize the image for imagenet
   double scale = resize_num / (double) min(img.rows,img.cols);
-  resize(img,scaleimg,Size(img.cols*scale,img.rows*scale));
+  if (img.cols == img.rows)
+    resize(img,scaleimg,Size(resize_num,resize_num));    
+  else if (img.cols < img.rows)
+    resize(img,scaleimg,Size(resize_num,img.rows*scale));
+  else
+    resize(img,scaleimg,Size(img.cols*scale,resize_num));    
   // center crop to appropriate size
+  //  std::cout << "rows = " << scaleimg.rows << std::endl;
+  //  std::cout << "cols = " << scaleimg.cols << std::endl;
+  //  std::cout << "orow = " << img.rows << std::endl;
+  //  std::cout << "ocol = " << img.cols << std::endl;  
+  //  std::cout << "left = " << (scaleimg.cols-image_size)/2 << std::endl;
+  //  std::cout << "top  = " << (scaleimg.rows-image_size)/2 << std::endl;
   cropimg = scaleimg(Rect((scaleimg.cols-image_size)/2,
 			  (scaleimg.rows-image_size)/2,
 			  image_size,image_size));
-  // TODO: normalize to: mean[0.485,0.456,0.406] std[0.229,0.224,0.224]
+  // normalize to: mean[0.485,0.456,0.406] std[0.229,0.224,0.224]
   // Change from HWC to CHW and convert to float32
+  // Also change from BGR to RGB
   Mat_<Vec3b> _image = cropimg;
+  int pixel0 = _image(0,0)[0];
   for (int i=0;i < image_size;i++)
     for (int j=0;j < image_size;j++){
-      image_data[0*image_size*image_size + i*image_size + j] = _image(i,j)[0]/256.0;
-      image_data[1*image_size*image_size + i*image_size + j] = _image(i,j)[1]/256.0;
-      image_data[2*image_size*image_size + i*image_size + j] = _image(i,j)[2]/256.0;
-    }     
+      image_data[0*image_size*image_size + i*image_size + j] = (_image(i,j)[2]/255.0 - mean[0])/stdev[0];
+      image_data[1*image_size*image_size + i*image_size + j] = (_image(i,j)[1]/255.0 - mean[0])/stdev[1];
+      image_data[2*image_size*image_size + i*image_size + j] = (_image(i,j)[0]/255.0 - mean[2])/stdev[2];
+    }
+  //  std::cout << "Orig  0 = " << pixel_orig0 << std::endl;
+  //  std::cout << "Orig  1 = " << pixel_orig1 << std::endl;
+  //  std::cout << "Orig  2 = " << pixel_orig2 << std::endl;
+  //  std::cout << "Pixel 0 = " << pixel0 << std::endl;
+  //  std::cout << "Float 0 = " << image_data[0] << std::endl;
 }
 
 // return the indices of the top elements, simple iterative algorithm

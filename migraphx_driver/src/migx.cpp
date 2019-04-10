@@ -18,6 +18,7 @@
  * More details about each of these options found with usage statement below.
  */
 #include <iostream>
+#include <fstream>
 #include <iomanip>
 #include <getopt.h>
 #include <unistd.h>
@@ -137,6 +138,7 @@ int parse_options(int argc,char *const argv[]){
     case 13:
       imagenet_dir = optarg;
       run_type = run_imagenet;
+      break;
     case 14:
       run_type = run_printmodel;
       break;
@@ -222,7 +224,6 @@ int main(int argc,char *const argv[],char *const envp[]){
 
   // set up the parameter map
   program::parameter_map pmap;
-  std::cout << "allocating parameters" << std::endl;
   for (auto&& x: prog.get_parameter_shapes()){
     //    pmap[x.first] = migraphx::gpu::to_gpu(generate_argument(x.second));
     pmap[x.first] = migraphx::gpu::allocate_gpu(x.second);
@@ -294,8 +295,41 @@ int main(int argc,char *const argv[],char *const envp[]){
     std::cout << "top5 = " << top5[4] << " " << imagenet_labels[top5[4]] << std::endl;
     break;
   case run_imagenet:
-    if (chdir(imagenet_dir) == -1){
-      std::cerr << migx_program << ": can not change to imagenet dir: " << imagenet_dir << std::endl;
+    {
+      int count = 0;
+      int ntop1 = 0;
+      int ntop5 = 0;
+      std::string imagefile;
+      int expected_result;
+      if (chdir(imagenet_dir.c_str()) == -1){
+	std::cerr << migx_program << ": can not change to imagenet dir: " << imagenet_dir << std::endl;
+	return 1;
+      }
+      std::fstream index("val.txt");
+      if (!index || (index.peek() == EOF)){
+	std::cerr << migx_program << ": can not open val.txt: " << imagenet_dir << std::endl;
+	return 1;
+      }
+      while (1){
+	index >> imagefile >> expected_result;
+	if (index.eof()) break;
+	read_image(imagefile,img_type,image_data);
+	count++;
+	pmap[argname] = migraphx::gpu::to_gpu(migraphx::argument{
+	    pmap[argname].get_shape(),image_data.data()});
+	resarg = prog.eval(pmap);
+	result = migraphx::gpu::from_gpu(resarg);
+	image_top5((float *) result.data(), top5);
+	if (top5[0] == expected_result) ntop1++;
+	if (top5[0] == expected_result ||
+	    top5[1] == expected_result ||
+	    top5[2] == expected_result || 
+	    top5[3] == expected_result || 
+	    top5[4] == expected_result) ntop5++;
+	if (count % 1000 == 0)
+	  std::cout << count << " top1: " << ntop1 << " top5: " << ntop5 << std::endl;
+      }
+      std::cout << "Overall - top1: " << (double) ntop1/count << " top5: " << (double) ntop5/count << std::endl;
     }
     break;
   case run_printmodel:
