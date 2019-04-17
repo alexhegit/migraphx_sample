@@ -62,7 +62,8 @@ std::string usage_message =
 bool is_verbose = false;
 enum model_type { model_unknown, model_onnx, model_tfpb } model_type = model_unknown;
 std::string model_filename;
-bool is_nchw = true;
+bool is_nhwc = true;
+bool set_nhwc = false;
 enum quantize_type { quantize_none, quantize_fp16, quantize_int8 } quantize_type = quantize_none;
 enum run_type { run_none, run_benchmark, run_perfreport, run_imageinfo, run_imagenet, run_printmodel } run_type = run_none;
 int iterations = 1000;
@@ -112,10 +113,11 @@ int parse_options(int argc,char *const argv[]){
       model_filename = optarg;
       break;
     case 5:
-      is_nchw = false;
+      is_nhwc = true;
+      set_nhwc = true;
       break;
     case 6:
-      is_nchw = true;
+      is_nhwc = false;
       break;
     case 7:
       quantize_type = quantize_fp16;
@@ -163,10 +165,10 @@ int parse_options(int argc,char *const argv[]){
     std::cerr << migx_program << ": either --onnx or --tfpb must be given" << std::endl;
     return 1;
   }
-  if (model_type == model_onnx && is_nchw == false){
-    std::cerr << migx_program << ": --nhwc not supported with --onnx" << std::endl;
+  if (model_type == model_onnx && set_nhwc && is_nhwc){
+    std::cerr << migx_program << ": --onnx is not compatible with --nhwc" << std::endl;
     return 1;
-  }
+  }  
   if ((run_type == run_imageinfo) && image_filename.empty()){
     std::cerr << migx_program << ": --imageinfo requires --imagefile option" << std::endl;
     return 1;
@@ -205,7 +207,9 @@ int main(int argc,char *const argv[],char *const envp[]){
     }
   } else if (model_type == model_tfpb){
     try {
-      prog = parse_tf(model_filename,!is_nchw);
+      prog = parse_tf(model_filename,is_nhwc);
+    } catch( std::exception &exc){
+      std::cerr << exc.what();
     } catch(...){
       std::cerr << migx_program << ": unable to load TF protobuf file " << model_filename << std::endl;
       return 1;
@@ -224,10 +228,19 @@ int main(int argc,char *const argv[],char *const envp[]){
 
   // set up the parameter map
   program::parameter_map pmap;
+  bool argname_found = false;
   for (auto&& x: prog.get_parameter_shapes()){
     //    pmap[x.first] = migraphx::gpu::to_gpu(generate_argument(x.second));
+    if (is_verbose)
+      std::cout << "parameter: " << x.first << std::endl;
+    if (x.first == argname) argname_found = true;
     pmap[x.first] = migraphx::gpu::allocate_gpu(x.second);
   }
+  if (argname_found == false){
+    std::cerr << "input argument: " << argname << " not found, use --argname to set name and --verbose to see parameters" << std::endl;
+    return 1;
+  }
+  
   enum image_type img_type;
   int batch_size = pmap[argname].get_shape().lens()[0];
   int channels = pmap[argname].get_shape().lens()[1]; // TODO: nhwc
