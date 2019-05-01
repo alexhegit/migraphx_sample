@@ -6,7 +6,7 @@
 #include "migx.hpp"
 using namespace cv;
 
-void read_image(std::string filename,enum image_type etype,std::vector<float> &image_data){
+void read_image(std::string filename,enum image_type etype,std::vector<float> &image_data,bool is_nhwc){
   Mat img,scaleimg,cropimg;
   int resize_num, image_size;
   
@@ -60,12 +60,21 @@ void read_image(std::string filename,enum image_type etype,std::vector<float> &i
   // Also change from BGR to RGB
   Mat_<Vec3b> _image = cropimg;
   int pixel0 = _image(0,0)[0];
-  for (int i=0;i < image_size;i++)
-    for (int j=0;j < image_size;j++){
-      image_data[0*image_size*image_size + i*image_size + j] = (_image(i,j)[2]/255.0 - mean[0])/stdev[0];
-      image_data[1*image_size*image_size + i*image_size + j] = (_image(i,j)[1]/255.0 - mean[0])/stdev[1];
-      image_data[2*image_size*image_size + i*image_size + j] = (_image(i,j)[0]/255.0 - mean[2])/stdev[2];
-    }
+  if (is_nhwc){
+    for (int i=0;i < image_size;i++)
+      for (int j=0;j < image_size;j++){
+	image_data[3*((i*image_size)+j)+0] = (_image(i,j)[2]/255.0 - mean[0])/stdev[0];
+	image_data[3*((i*image_size)+j)+1] = (_image(i,j)[1]/255.0 - mean[1])/stdev[1];
+	image_data[3*((i*image_size)+j)+2] = (_image(i,j)[0]/255.0 - mean[2])/stdev[2];		
+      }
+  } else {
+    for (int i=0;i < image_size;i++)
+      for (int j=0;j < image_size;j++){
+	image_data[0*image_size*image_size + i*image_size + j] = (_image(i,j)[2]/255.0 - mean[0])/stdev[0];
+	image_data[1*image_size*image_size + i*image_size + j] = (_image(i,j)[1]/255.0 - mean[1])/stdev[1];
+	image_data[2*image_size*image_size + i*image_size + j] = (_image(i,j)[0]/255.0 - mean[2])/stdev[2];
+      }
+  }
   //  std::cout << "Orig  0 = " << pixel_orig0 << std::endl;
   //  std::cout << "Orig  1 = " << pixel_orig1 << std::endl;
   //  std::cout << "Orig  2 = " << pixel_orig2 << std::endl;

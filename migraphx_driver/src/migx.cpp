@@ -255,7 +255,7 @@ int main(int argc,char *const argv[],char *const envp[]){
   if (!image_filename.empty()){
     if (is_verbose)
       std::cout << "reading image: " << image_filename << " " << std::endl;
-    read_image(image_filename,img_type,image_data);
+    read_image(image_filename,img_type,image_data,false/*(model_type == model_tfpb) && is_nhwc*/);
   }
 
   migraphx::argument result;
@@ -326,7 +326,7 @@ int main(int argc,char *const argv[],char *const envp[]){
       while (1){
 	index >> imagefile >> expected_result;
 	if (index.eof()) break;
-	read_image(imagefile,img_type,image_data);
+	read_image(imagefile,img_type,image_data,false/*(model_type == model_tfpb)&& is_nhwc*/);
 	count++;
 	pmap[argname] = migraphx::gpu::to_gpu(migraphx::argument{
 	    pmap[argname].get_shape(),image_data.data()});
