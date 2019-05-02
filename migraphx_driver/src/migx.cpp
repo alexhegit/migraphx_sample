@@ -326,14 +326,19 @@ int main(int argc,char *const argv[],char *const envp[]){
     prog.perf_report(std::cout,iterations,pmap);
     break;
   case run_imageinfo:
-    if (!is_gpu){
-      std::cerr << "--imageinfo doesn't work with --cpu" << std::endl;
-      break;
+    if (is_gpu) {
+      pmap[argname] = migraphx::gpu::to_gpu(migraphx::argument{
+	  pmap[argname].get_shape(),image_data.data()});
+    } else {
+      pmap[argname] = migraphx::argument{
+	pmap[argname].get_shape(),image_data.data()};
     }
-    pmap[argname] = migraphx::gpu::to_gpu(migraphx::argument{
-	pmap[argname].get_shape(),image_data.data()});
-    resarg = prog.eval(pmap);
-    result = migraphx::gpu::from_gpu(resarg);
+    if (is_gpu){
+      resarg = prog.eval(pmap);
+      result = migraphx::gpu::from_gpu(resarg);
+    } else {
+      result = prog.eval(pmap);
+    }
     image_top5((float *) result.data(), top5);
     std::cout << "top1 = " << top5[0] << " " << imagenet_labels[top5[0]] << std::endl;
     std::cout << "top2 = " << top5[1] << " " << imagenet_labels[top5[1]] << std::endl;
