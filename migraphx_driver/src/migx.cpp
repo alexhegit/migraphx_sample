@@ -347,10 +347,6 @@ int main(int argc,char *const argv[],char *const envp[]){
     std::cout << "top5 = " << top5[4] << " " << imagenet_labels[top5[4]] << std::endl;
     break;
   case run_imagenet:
-    if (!is_gpu){
-      std::cerr << "--imagenet doesn't work with --cpu" << std::endl;
-      break;
-    }      
     {
       int count = 0;
       int ntop1 = 0;
@@ -371,10 +367,16 @@ int main(int argc,char *const argv[],char *const envp[]){
 	if (index.eof()) break;
 	read_image(imagefile,img_type,image_data,false/*(model_type == model_tfpb)&& is_nhwc*/);
 	count++;
-	pmap[argname] = migraphx::gpu::to_gpu(migraphx::argument{
-	    pmap[argname].get_shape(),image_data.data()});
-	resarg = prog.eval(pmap);
-	result = migraphx::gpu::from_gpu(resarg);
+	if (is_gpu){
+	  pmap[argname] = migraphx::gpu::to_gpu(migraphx::argument{
+	      pmap[argname].get_shape(),image_data.data()});
+	  resarg = prog.eval(pmap);
+	  result = migraphx::gpu::from_gpu(resarg);
+	} else {
+	  pmap[argname] = migraphx::argument{
+	    pmap[argname].get_shape(),image_data.data()};
+	  result = prog.eval(pmap);
+	}
 	image_top5((float *) result.data(), top5);
 	if (top5[0] == expected_result) ntop1++;
 	if (top5[0] == expected_result ||
