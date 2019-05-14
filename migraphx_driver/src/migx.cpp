@@ -266,7 +266,7 @@ int main(int argc,char *const argv[],char *const envp[]){
     else
       pmap[x.first] = migraphx::generate_argument(x.second,get_hash(x.first));
   }
-  if (argname_found == false){
+  if (argname_found == false && run_type != run_printmodel){
     std::cerr << "input argument: " << argname << " not found, use --argname to set name and --verbose to see parameters" << std::endl;
     return 1;
   }
