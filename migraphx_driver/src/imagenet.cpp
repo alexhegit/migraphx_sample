@@ -1,5 +1,3 @@
-#include <string>
-#include <vector>
 
 const char *imagenet_labels[] = {
   "tench, Tinca tinca",

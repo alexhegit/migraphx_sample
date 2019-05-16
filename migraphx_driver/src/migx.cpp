@@ -56,6 +56,7 @@ std::string usage_message =
   "        --benchmark          run model repeatedly and time results\n" +
   "        --imageinfo          run model once and report top5 buckets for an image\n" +
   "        --imagenet=<dir>     run model on an imagenet directory\n" +
+  "        --mnist=<dir>        run model on mnist directory\n"
   "        --print_model        show MIGraphX instructions for model\n" +
   "        --iterations=<n>     set iterations for perf_report and benchmark (default 1000)\n" +
   "        --copyarg            copy arguments in and results back (--benchmark only)\n" +
@@ -69,12 +70,14 @@ std::string model_filename;
 bool is_nhwc = true;
 bool set_nhwc = false;
 enum quantize_type { quantize_none, quantize_fp16, quantize_int8 } quantize_type = quantize_none;
-enum run_type { run_none, run_benchmark, run_perfreport, run_imageinfo, run_imagenet, run_printmodel } run_type = run_none;
+enum run_type { run_none, run_benchmark, run_perfreport, run_imageinfo, run_imagenet, run_mnist, run_printmodel } run_type = run_none;
 int iterations = 1000;
 bool copyarg = false;
 std::string argname = "0";
 std::string image_filename;
 std::string imagenet_dir;
+std::string mnist_dir;
+int mnist_images;
 
 /* parse_options
  *
@@ -98,10 +101,11 @@ int parse_options(int argc,char *const argv[]){
     { "perf_report", no_argument,   0, 13 },
     { "imageinfo", no_argument,     0, 14 },
     { "imagenet", required_argument, 0, 15 },
-    { "print_model", no_argument,   0, 16 },
-    { "iterations", required_argument, 0, 17 },
-    { "copyarg", no_argument,     0, 18 },
-    { "argname", required_argument, 0, 19 },
+    { "mnist", required_argument, 0, 16 },
+    { "print_model", no_argument,   0, 17 },
+    { "iterations", required_argument, 0, 18 },
+    { "copyarg", no_argument,     0, 19 },
+    { "argname", required_argument, 0, 20 },
   };
   while ((opt = getopt_long(argc,argv,"",long_options,NULL)) != -1){
     switch (opt){
@@ -154,19 +158,23 @@ int parse_options(int argc,char *const argv[]){
       run_type = run_imagenet;
       break;
     case 16:
-      run_type = run_printmodel;
+      mnist_dir = optarg;
+      run_type = run_mnist;
       break;
     case 17:
+      run_type = run_printmodel;
+      break;
+    case 18:
       if (std::stoi(optarg) < 0){
 	std::cerr << migx_program << ": iterations < 0, ignored" << std::endl;
       } else {
 	iterations = std::stoi(optarg);
       }
       break;
-    case 18:
+    case 19:
       copyarg = true;
       break;
-    case 19:
+    case 20:
       argname = optarg;
       break;
     default:
@@ -249,17 +257,23 @@ int main(int argc,char *const argv[],char *const envp[]){
   // set up the parameter map for gpu, and set NCHW parameters
   program::parameter_map pmap;
   bool argname_found = false;
-  int batch_size, channels, height, width;
+  int batch_size, channels=0, height, width;
   enum image_type img_type;
   for (auto&& x: prog.get_parameter_shapes()){
     if (is_verbose)
       std::cout << "parameter: " << x.first << std::endl;
     if (x.first == argname){
       argname_found = true;
-      batch_size = x.second.lens()[0];
-      channels = x.second.lens()[1];
-      height = x.second.lens()[2];
-      width = x.second.lens()[3];
+      if (x.second.lens().size() == 4){
+	batch_size = x.second.lens()[0];
+	channels = x.second.lens()[1];
+	height = x.second.lens()[2];
+	width = x.second.lens()[3];
+      } else if (x.second.lens().size() == 3){
+	channels = x.second.lens()[0];
+	height = x.second.lens()[1];
+	width = x.second.lens()[2];	
+      }
     }
     if (is_gpu)
       pmap[x.first] = migraphx::gpu::allocate_gpu(x.second);
@@ -270,17 +284,30 @@ int main(int argc,char *const argv[],char *const envp[]){
     std::cerr << "input argument: " << argname << " not found, use --argname to set name and --verbose to see parameters" << std::endl;
     return 1;
   }
-  
-  if (channels == 3 && height == 224 && width == 224) img_type = image_imagenet224;
-  else if (channels == 3 && height == 299 && width == 299) img_type = image_imagenet299;
-  else img_type = image_unknown;
+
+  if (is_verbose){
+    std::cout << "model input: [" << channels << "," << height << "," << width << "]";
+  }
+  if (channels == 3 && height == 224 && width == 224){
+    if (is_verbose) std::cout << " imagenet 224" << std::endl;
+    img_type = image_imagenet224;
+  } else if (channels == 3 && height == 299 && width == 299){
+    if (is_verbose) std::cout << " imagenet 299" << std::endl;    
+    img_type = image_imagenet299;
+  } else if (channels == 1 && height == 28 && width == 28){
+    if (is_verbose) std::cout << " mnist" << std::endl;        
+    img_type = image_mnist;
+  } else {
+    if (is_verbose) std::cout << std::endl;
+    img_type = image_unknown;
+  }
 
   // read image data if passed
   std::vector<float> image_data(3*height*width);
   if (!image_filename.empty()){
     if (is_verbose)
       std::cout << "reading image: " << image_filename << " " << std::endl;
-    read_image(image_filename,img_type,image_data,false/*(model_type == model_tfpb) && is_nhwc*/);
+    read_image(image_filename,img_type,image_data,model_type == model_tfpb && is_nhwc);
   }
 
   migraphx::argument result;
@@ -388,6 +415,44 @@ int main(int argc,char *const argv[],char *const envp[]){
 	  std::cout << count << " top1: " << ntop1 << " top5: " << ntop5 << std::endl;
       }
       std::cout << "Overall - top1: " << (double) ntop1/count << " top5: " << (double) ntop5/count << std::endl;
+    }
+    break;
+  case run_mnist:
+    {
+      int i,j;
+      std::vector<float> image_data(28*28);
+      int label;
+      float *label_result;
+      if (img_type != image_mnist){
+	std::cerr << migx_program << ": --mnist requires input size [1,28,28]" << std::endl;
+	return 1;
+      }
+      if (initialize_mnist_streams(mnist_dir,mnist_images)){
+	std::cerr << migx_program << ": can not read mnist files in dir: " << mnist_dir << std::endl;
+	return 1;
+      }
+      if (is_verbose)
+	std::cout << "mnist images = " << mnist_images << std::endl;
+      for (i=0;i<mnist_images;i++){
+	read_mnist(image_data,label);
+	ascii_mnist(image_data,label);
+	if (is_gpu){
+	  pmap[argname] = migraphx::gpu::to_gpu(migraphx::argument{
+	      pmap[argname].get_shape(),image_data.data()});
+	  resarg = prog.eval(pmap);
+	  result = migraphx::gpu::from_gpu(resarg);
+	} else {
+	  pmap[argname] = migraphx::argument{
+	    pmap[argname].get_shape(),image_data.data()};
+	  result = prog.eval(pmap);	  
+	}
+	label_result = (float *) result.data();
+	for (j=0;j<10;j++){
+	  std::cout << label_result[j] << " ";
+	}
+	std::cout << std::endl;
+      }
+      finish_mnist_streams();
     }
     break;
   case run_printmodel:

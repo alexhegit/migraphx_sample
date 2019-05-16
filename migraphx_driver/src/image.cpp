@@ -9,6 +9,8 @@ using namespace cv;
 void read_image(std::string filename,enum image_type etype,std::vector<float> &image_data,bool is_nhwc){
   Mat img,scaleimg,cropimg;
   int resize_num, image_size;
+
+  std::cout<<"nhcw = " << is_nhwc << std::endl;
   
   switch(etype){
   case image_unknown:
