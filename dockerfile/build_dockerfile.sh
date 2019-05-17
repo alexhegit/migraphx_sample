@@ -15,7 +15,7 @@ echo "FROM $docker_base" > ${DOCKERFILE}
 
 # System pre-requisites
 cat >> $DOCKERFILE <<EOF
-RUN apt update && apt install -y git cmake python-pip python3-pip zlib1g-dev
+RUN apt update && apt install -y git cmake python-pip python3-pip zlib1g-dev unzip autogen autoconf libtool wget
 RUN apt update && apt install -y libnuma-dev rocm-cmake rocm-libs miopen-hip
 RUN apt update && apt install -y libopencv-dev
 RUN pip install https://github.com/RadeonOpenCompute/rbuild/archive/master.tar.gz
@@ -27,6 +27,15 @@ cat >> $DOCKERFILE <<EOF
 RUN mkdir /src
 RUN cd /src && git clone https://github.com/ROCmSoftwarePlatform/AMDMIGraphX
 RUN cd /src && git clone https://github.com/mvermeulen/migraphx_sample 
+ENV LD_LIBRARY_PATH=/usr/local/lib:
 COPY copyfiles/build.sh /src
-COPY copyfiles/half.hpp /usr/local/include/half.hpp
+COPY copyfiles/include/half.hpp /usr/local/include/
+COPY copyfiles/include/blaze/* /usr/local/include/blaze/
+EOF
+
+# Copy in PyTorch/Tensorflow components needed for simple graphs
+# NOTE: Could also install AMD Versions rather than CPU versions...
+cat >> $DOCKERFILE <<EOF
+RUN pip3 install torch torchvision
+RUN pip3 install tensorflow
 EOF
