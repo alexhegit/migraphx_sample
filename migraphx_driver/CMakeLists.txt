@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project (MIGraphX_driver)
 
-set (MIGRAPHX_FOLDER /home/mev/source/AMDMIGraphX)
+set (MIGRAPHX_FOLDER /src/AMDMIGraphX)
 set (MIGRAPHX_BUILD ${MIGRAPHX_FOLDER}/build)
 set (CMAKE_CXX_COMPILER /opt/rocm/bin/hcc)
 set (CMAKE_CXX_STANDARD 14)
