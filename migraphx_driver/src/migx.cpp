@@ -62,7 +62,6 @@ std::string usage_message =
   "        --copyarg            copy arguments in and results back (--benchmark only)\n" +
   "        --argname=<name>     set name of model input argument (default 0)\n";
 
-
 bool is_verbose = false;
 bool is_gpu = true;
 enum model_type { model_unknown, model_onnx, model_tfpb } model_type = model_unknown;
@@ -420,6 +419,7 @@ int main(int argc,char *const argv[],char *const envp[]){
   case run_mnist:
     {
       int i,j;
+      
       std::vector<float> image_data(28*28);
       int label;
       float *label_result;
@@ -433,9 +433,11 @@ int main(int argc,char *const argv[],char *const envp[]){
       }
       if (is_verbose)
 	std::cout << "mnist images = " << mnist_images << std::endl;
+      int total_pass = 0;
       for (i=0;i<mnist_images;i++){
 	read_mnist(image_data,label);
-	ascii_mnist(image_data,label);
+	if (is_verbose)
+	  ascii_mnist(image_data,label);
 	if (is_gpu){
 	  pmap[argname] = migraphx::gpu::to_gpu(migraphx::argument{
 	      pmap[argname].get_shape(),image_data.data()});
@@ -447,12 +449,22 @@ int main(int argc,char *const argv[],char *const envp[]){
 	  result = prog.eval(pmap);	  
 	}
 	label_result = (float *) result.data();
+	int maxidx=0;
 	for (j=0;j<10;j++){
-	  std::cout << label_result[j] << " ";
+	  if (label_result[j] > label_result[maxidx])
+	    maxidx = j;
 	}
-	std::cout << std::endl;
+	if (maxidx == label) total_pass++;
+	    
+	if (is_verbose){
+	  for (j=0;j<10;j++){
+	    std::cout << ((j==maxidx)?"*":"") << label_result[j] << " ";
+	  }
+	  std::cout << std::endl;
+	}
       }
       finish_mnist_streams();
+      std::cout << "MNIST results: " << total_pass << " / " << mnist_images << " = " << (double) total_pass / mnist_images << std::endl;
     }
     break;
   case run_printmodel:
@@ -461,3 +473,4 @@ int main(int argc,char *const argv[],char *const envp[]){
   }
   return 0;
 }
+
