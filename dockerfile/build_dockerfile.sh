@@ -30,7 +30,6 @@ RUN cd /src && git clone https://github.com/mvermeulen/migraphx_sample
 ENV LD_LIBRARY_PATH=/usr/local/lib:
 COPY copyfiles/build.sh /src
 COPY copyfiles/include/half.hpp /usr/local/include/
-COPY copyfiles/include/blaze/* /usr/local/include/blaze/
 EOF
 
 # Copy in PyTorch/Tensorflow components needed for simple graphs
