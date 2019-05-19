@@ -22,6 +22,7 @@
 #include <iomanip>
 #include <getopt.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <sys/time.h>
 #include <migraphx/onnx.hpp>
 #include <migraphx/tf.hpp>
@@ -41,6 +42,8 @@ std::string usage_message =
   "        --verbose\n" +
   "        --gpu                run GPU mode (default)\n" +  
   "        --cpu                run CPU mode rather than GPU\n" +
+  "        --trace_compile      turn on MIGRAPHX_TRACE_COMPILE\n" +
+  "        --trace_eval         turn on MIGRAPHX_TRACE_EVAL\n" +
   "    loading saved models (either --onnx or --tfpb are required)\n" + 
   "        --onnx=<filename>\n" +
   "        --tfpb=<filename>\n" +
@@ -77,6 +80,10 @@ std::string image_filename;
 std::string imagenet_dir;
 std::string mnist_dir;
 int mnist_images;
+bool trace_eval = false;
+std::string trace_eval_var = "MIGRAPHX_TRACE_EVAL=1";
+bool trace_compile = false;
+std::string trace_compile_var = "MIGRAPHX_TRACE_COMPILE=1";
 
 /* parse_options
  *
@@ -89,22 +96,24 @@ int parse_options(int argc,char *const argv[]){
     { "verbose", no_argument,       0, 2 },
     { "gpu",     no_argument,       0, 3 },
     { "cpu",     no_argument,       0, 4 },
-    { "onnx",    required_argument, 0, 5 },
-    { "tfpb",    required_argument, 0, 6 },
-    { "nhwc",    no_argument,       0, 7 },
-    { "nchw",    no_argument,       0, 8 },
-    { "fp16",    no_argument,       0, 9 },
-    { "int8",    no_argument,       0, 10 },
-    { "imagefile", required_argument, 0, 11 },
-    { "benchmark", no_argument,     0, 12 },
-    { "perf_report", no_argument,   0, 13 },
-    { "imageinfo", no_argument,     0, 14 },
-    { "imagenet", required_argument, 0, 15 },
-    { "mnist", required_argument, 0, 16 },
-    { "print_model", no_argument,   0, 17 },
-    { "iterations", required_argument, 0, 18 },
-    { "copyarg", no_argument,     0, 19 },
-    { "argname", required_argument, 0, 20 },
+    { "trace_eval", no_argument,    0, 5 },
+    { "trace_compile", no_argument,    0, 6 },    
+    { "onnx",    required_argument, 0, 7 },
+    { "tfpb",    required_argument, 0, 8 },
+    { "nhwc",    no_argument,       0, 9 },
+    { "nchw",    no_argument,       0, 10 },
+    { "fp16",    no_argument,       0, 11 },
+    { "int8",    no_argument,       0, 12 },
+    { "imagefile", required_argument, 0, 13 },
+    { "benchmark", no_argument,     0, 14 },
+    { "perf_report", no_argument,   0, 15 },
+    { "imageinfo", no_argument,     0, 16 },
+    { "imagenet", required_argument, 0, 17 },
+    { "mnist", required_argument, 0, 18 },
+    { "print_model", no_argument,   0, 19 },
+    { "iterations", required_argument, 0, 20 },
+    { "copyarg", no_argument,     0, 21 },
+    { "argname", required_argument, 0, 22 },
   };
   while ((opt = getopt_long(argc,argv,"",long_options,NULL)) != -1){
     switch (opt){
@@ -120,60 +129,66 @@ int parse_options(int argc,char *const argv[]){
       is_gpu = false;
       break;
     case 5:
+      trace_eval = true;
+      break;
+    case 6:
+      trace_compile = true;
+      break;
+    case 7:
       model_type = model_onnx;
       model_filename = optarg;
       break;
-    case 6:
+    case 8:
       model_type = model_tfpb;
       model_filename = optarg;
       break;
-    case 7:
+    case 9:
       is_nhwc = true;
       set_nhwc = true;
       break;
-    case 8:
+    case 10:
       is_nhwc = false;
       break;
-    case 9:
+    case 11:
       quantize_type = quantize_fp16;
       break;
-    case 10:
+    case 12:
       quantize_type = quantize_int8;
       break;
-    case 11:
+    case 13:
       image_filename = optarg;
       break;
-    case 12:
+    case 14:
       run_type = run_benchmark;
       break;
-    case 13:
+    case 15:
       run_type = run_perfreport;
       break;
-    case 14:
+    case 16:
       run_type = run_imageinfo;
       break;
-    case 15:
+    case 17:
       imagenet_dir = optarg;
       run_type = run_imagenet;
       break;
-    case 16:
+    case 18:
       mnist_dir = optarg;
       run_type = run_mnist;
       break;
-    case 17:
+    case 19:
       run_type = run_printmodel;
       break;
-    case 18:
+    case 20:
       if (std::stoi(optarg) < 0){
 	std::cerr << migx_program << ": iterations < 0, ignored" << std::endl;
       } else {
 	iterations = std::stoi(optarg);
       }
       break;
-    case 19:
+    case 21:
       copyarg = true;
       break;
-    case 20:
+    case 22:
       argname = optarg;
       break;
     default:
@@ -246,6 +261,9 @@ int main(int argc,char *const argv[],char *const envp[]){
   }
 
   // compile the program
+  if (trace_compile){
+    putenv((char *) trace_compile_var.c_str());
+  }
   if (is_verbose)
     std::cout << "compiling model" << std::endl;
   if (is_gpu)
@@ -314,6 +332,9 @@ int main(int argc,char *const argv[],char *const envp[]){
   double start_time,finish_time,elapsed_time;
   int top5[5];
   // alternatives for running the program
+  if (trace_eval){
+    putenv((char *) trace_eval_var.c_str());    
+  }
   auto ctx = prog.get_context();
   switch(run_type){
   case run_none:
