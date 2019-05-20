@@ -514,6 +514,7 @@ int main(int argc,char *const argv[],char *const envp[]){
       int total_pass = 0;
       for (i=0;i<mnist_images;i++){
 	read_mnist(image_data,label);
+	if (i==8) debug_mnist(image_data);
 	if (is_verbose)
 	  ascii_mnist(image_data,label);
 	if (is_gpu){
