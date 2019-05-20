@@ -62,6 +62,7 @@ std::string usage_message =
   "        --imagenet=<dir>     run model on an imagenet directory\n" +
   "        --mnist=<dir>        run model on mnist directory\n"
   "        --print_model        show MIGraphX instructions for model\n" +
+  "        --eval               run model and dump output to stdout\n" +
   "        --iterations=<n>     set iterations for perf_report and benchmark (default 1000)\n" +
   "        --copyarg            copy arguments in and results back (--benchmark only)\n" +
   "        --argname=<name>     set name of model input argument (default 0)\n";
@@ -336,8 +337,11 @@ int main(int argc,char *const argv[],char *const envp[]){
   }
 
   // read image data if passed
-  std::vector<float> image_data(3*height*width);
+  //  std::vector<float> image_data(3*height*width);
+  std::vector<float> image_data;
   if (fileinput_type == fileinput_image){
+    std::vector<float> image_alloc(3*height*width);    
+    image_data = image_alloc;
     if (!image_filename.empty()){
       if (is_verbose)
 	std::cout << "reading image: " << image_filename << " " << std::endl;
@@ -348,6 +352,10 @@ int main(int argc,char *const argv[],char *const envp[]){
       if (is_verbose)
 	std::cout << "reading debug: " << image_filename << " " << std::endl;
       read_float_file(debug_filename,image_data);
+    }
+    if (image_data.size() < argshape.elements()){
+      std::cerr << migx_program << ": model requires " << argshape.elements() << " inputs, only " << image_data.size() << " provided" << std::endl;
+      return 1;
     }
   }
 
@@ -517,6 +525,11 @@ int main(int argc,char *const argv[],char *const envp[]){
     break;
   case run_eval:
     // load argument
+    if (is_verbose){
+      std::cout << "Inputs: " << std::endl;
+      for (int i=0;i < image_data.size();i++)
+	std::cout << "\t" << image_data[i] << std::endl;
+    }
     if (is_gpu){
       pmap[argname] = migraphx::gpu::to_gpu(migraphx::argument{
 	  pmap[argname].get_shape(),image_data.data()});
