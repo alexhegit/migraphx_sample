@@ -71,6 +71,14 @@ void ascii_mnist(std::vector<float> &img_data,int labelnum){
   fprintf(stdout,"label = %d\n",labelnum);
 }
 
+void debug_mnist(std::vector<float> &img_data){
+  int i,j;
+  for (i=0;i<28;i++){
+    for (j=0;j<28;j++){
+      std::cout << img_data[i*28+j] << std::endl;
+    }
+  }
+}
 
 void finish_mnist_streams(){
   fclose(image_fp);

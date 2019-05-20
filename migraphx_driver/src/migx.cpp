@@ -63,6 +63,7 @@ std::string usage_message =
   "        --mnist=<dir>        run model on mnist directory\n"
   "        --print_model        show MIGraphX instructions for model\n" +
   "        --eval               run model and dump output to stdout\n" +
+  "        --trim=<n>           trim program to remove last <n> instructions\n" +
   "        --iterations=<n>     set iterations for perf_report and benchmark (default 1000)\n" +
   "        --copyarg            copy arguments in and results back (--benchmark only)\n" +
   "        --argname=<name>     set name of model input argument (default 0)\n";
@@ -74,7 +75,7 @@ std::string model_filename;
 bool is_nhwc = true;
 bool set_nhwc = false;
 enum quantize_type { quantize_none, quantize_fp16, quantize_int8 } quantize_type = quantize_none;
-enum run_type { run_none, run_benchmark, run_perfreport, run_imageinfo, run_imagenet, run_mnist, run_printmodel, run_eval } run_type = run_none;
+enum run_type { run_none, run_benchmark, run_perfreport, run_imageinfo, run_imagenet, run_mnist, run_printmodel, run_eval, run_eval_print } run_type = run_none;
 int iterations = 1000;
 bool copyarg = false;
 std::string argname = "0";
@@ -84,6 +85,7 @@ std::string debug_filename;
 std::string imagenet_dir;
 std::string mnist_dir;
 int mnist_images;
+int trim_instructions = 0;
 bool trace_eval = false;
 std::string trace_eval_var = "MIGRAPHX_TRACE_EVAL=1";
 bool trace_compile = false;
@@ -117,9 +119,10 @@ int parse_options(int argc,char *const argv[]){
     { "mnist", required_argument, 0, 19 },
     { "print_model", no_argument,   0, 20 },
     { "eval", no_argument, 0, 21 },
-    { "iterations", required_argument, 0, 22 },
-    { "copyarg", no_argument,     0, 23 },
-    { "argname", required_argument, 0, 24 },
+    { "trim", required_argument, 0, 22 },
+    { "iterations", required_argument, 0, 23 },
+    { "copyarg", no_argument,     0, 24 },
+    { "argname", required_argument, 0, 25 },
   };
   while ((opt = getopt_long(argc,argv,"",long_options,NULL)) != -1){
     switch (opt){
@@ -187,22 +190,35 @@ int parse_options(int argc,char *const argv[]){
       run_type = run_mnist;
       break;
     case 20:
-      run_type = run_printmodel;
+      if (run_type == run_eval)
+	run_type = run_eval_print;
+      else
+	run_type = run_printmodel;
       break;
     case 21:
-      run_type = run_eval;
+      if (run_type == run_printmodel)
+	run_type = run_eval_print;
+      else
+	run_type = run_eval;
       break;
     case 22:
+      if (std::stoi(optarg) < 0){
+	std::cerr << migx_program << ": trim < 0, ignored" << std::endl;	
+      } else {
+	trim_instructions = std::stoi(optarg);
+      }
+      break;
+    case 23:
       if (std::stoi(optarg) < 0){
 	std::cerr << migx_program << ": iterations < 0, ignored" << std::endl;
       } else {
 	iterations = std::stoi(optarg);
       }
       break;
-    case 23:
+    case 24:
       copyarg = true;
       break;
-    case 24:
+    case 25:
       argname = optarg;
       break;
     default:
@@ -283,7 +299,16 @@ int main(int argc,char *const argv[],char *const envp[]){
   if (is_gpu)
     prog.compile(migraphx::gpu::target{});
   else
-    prog.compile(migraphx::cpu::target{});    
+    prog.compile(migraphx::cpu::target{});
+
+  // remove the last "trim=n" instructions, debugging tool with --eval to print out intermediate results
+  if (trim_instructions > 0 && trim_instructions << prog.size()){
+    auto prog2 = prog;
+    // create shorter program removing "trim" instructions in size
+    auto last = std::prev(prog2.end(),trim_instructions);
+    prog2.remove_instructions(last,prog2.end());
+    prog = prog2;
+  }
 
   // set up the parameter map
   program::parameter_map pmap;  
@@ -521,8 +546,13 @@ int main(int argc,char *const argv[],char *const envp[]){
     }
     break;
   case run_printmodel:
+    std::cout << "Program with " << prog.size() << " instructions" << std::endl;
     std::cout << prog;
     break;
+  case run_eval_print:
+    std::cout << "Program with " << prog.size() << " instructions" << std::endl;
+    std::cout << prog;
+    // fallthru
   case run_eval:
     // load argument
     if (is_verbose){
