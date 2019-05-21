@@ -31,7 +31,9 @@
 #include <migraphx/cpu/target.hpp>
 #include <migraphx/generate.hpp>
 #include <migraphx/context.hpp>
+#ifdef QUANTIZATION
 #include <migraphx/quantization.hpp>
+#endif
 #include "migx.hpp"
 using namespace migraphx;
 std::string migx_program; // argv[0] of this process
@@ -286,10 +288,13 @@ int main(int argc,char *const argv[],char *const envp[]){
     }
   }
 
+#ifdef QUANTIZATION
   // quantize the program
   if (quantize_type == quantize_fp16){
     quantize(prog);
-  } else if (quantize_type != quantize_none){
+  } else
+#endif
+    if (quantize_type != quantize_none){
     std::cerr << "quantization not yet implemented" << std::endl;
   }
 
@@ -372,7 +377,12 @@ int main(int argc,char *const argv[],char *const envp[]){
     if (!image_filename.empty()){
       if (is_verbose)
 	std::cout << "reading image: " << image_filename << " " << std::endl;
+<<<<<<< HEAD
       read_image(image_filename,img_type,image_alloc,false,model_type==model_onnx);
+=======
+      // images always in nchw formats, e.g. 1x3x224x224
+      read_image(image_filename,img_type,image_alloc,false);
+>>>>>>> 0e4f37cb26f278c8f032d45ead7c416222003e93
       image_data = image_alloc;
     }
   } else if (fileinput_type == fileinput_debug){
