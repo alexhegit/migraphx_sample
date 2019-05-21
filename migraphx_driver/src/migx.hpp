@@ -9,7 +9,7 @@ extern bool is_verbose;
 
 void rimage(std::vector<float> &img_data);
 
-void read_image(std::string filename,enum image_type etype,std::vector<float> &img_data,bool is_nhwc);
+void read_image(std::string filename,enum image_type etype,std::vector<float> &img_data,bool is_nhwc,bool is_torchvision);
 void image_top5(float *res,int *top5);
 
 int initialize_mnist_streams(std::string dir,int &num_images);

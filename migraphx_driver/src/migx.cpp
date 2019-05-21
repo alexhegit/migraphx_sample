@@ -305,7 +305,7 @@ int main(int argc,char *const argv[],char *const envp[]){
     prog.compile(migraphx::cpu::target{});
 
   // remove the last "trim=n" instructions, debugging tool with --eval to print out intermediate results
-  if (trim_instructions > 0 && trim_instructions << prog.size()){
+  if (trim_instructions > 0 && trim_instructions < prog.size()){
     auto prog2 = prog;
     // create shorter program removing "trim" instructions in size
     auto last = std::prev(prog2.end(),trim_instructions);
@@ -372,7 +372,7 @@ int main(int argc,char *const argv[],char *const envp[]){
     if (!image_filename.empty()){
       if (is_verbose)
 	std::cout << "reading image: " << image_filename << " " << std::endl;
-      read_image(image_filename,img_type,image_alloc,model_type == model_tfpb && is_nhwc);
+      read_image(image_filename,img_type,image_alloc,false,model_type==model_onnx);
       image_data = image_alloc;
     }
   } else if (fileinput_type == fileinput_debug){
@@ -472,7 +472,7 @@ int main(int argc,char *const argv[],char *const envp[]){
       while (1){
 	index >> imagefile >> expected_result;
 	if (index.eof()) break;
-	read_image(imagefile,img_type,image_alloc,false/*(model_type == model_tfpb)&& is_nhwc*/);
+	read_image(imagefile,img_type,image_alloc,false,model_type==model_onnx);
 	count++;
 	if (is_gpu){
 	  pmap[argname] = migraphx::gpu::to_gpu(migraphx::argument{

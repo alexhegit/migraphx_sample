@@ -6,7 +6,7 @@
 #include "migx.hpp"
 using namespace cv;
 
-void read_image(std::string filename,enum image_type etype,std::vector<float> &image_data,bool is_nhwc){
+void read_image(std::string filename,enum image_type etype,std::vector<float> &image_data,bool is_nhwc,bool is_torchvision){
   Mat img,scaleimg,cropimg;
   int resize_num, image_size;
 
@@ -55,6 +55,7 @@ void read_image(std::string filename,enum image_type etype,std::vector<float> &i
   cropimg = scaleimg(Rect((scaleimg.cols-image_size)/2,
 			  (scaleimg.rows-image_size)/2,
 			  image_size,image_size));
+  // PyTorch image processing
   // normalize to: mean[0.485,0.456,0.406] std[0.229,0.224,0.224]
   // Change from HWC to CHW and convert to float32
   // Also change from BGR to RGB
@@ -68,12 +69,21 @@ void read_image(std::string filename,enum image_type etype,std::vector<float> &i
 	image_data[3*((i*image_size)+j)+2] = (_image(i,j)[0]/255.0 - mean[2])/stdev[2];		
       }
   } else {
-    for (int i=0;i < image_size;i++)
-      for (int j=0;j < image_size;j++){
-	image_data[0*image_size*image_size + i*image_size + j] = (_image(i,j)[2]/255.0 - mean[0])/stdev[0];
-	image_data[1*image_size*image_size + i*image_size + j] = (_image(i,j)[1]/255.0 - mean[1])/stdev[1];
-	image_data[2*image_size*image_size + i*image_size + j] = (_image(i,j)[0]/255.0 - mean[2])/stdev[2];
-      }
+    if (is_torchvision){
+      for (int i=0;i < image_size;i++)
+	for (int j=0;j < image_size;j++){
+	  image_data[0*image_size*image_size + i*image_size + j] = (_image(i,j)[2]/255.0 - mean[0])/stdev[0];
+	  image_data[1*image_size*image_size + i*image_size + j] = (_image(i,j)[1]/255.0 - mean[1])/stdev[1];
+	  image_data[2*image_size*image_size + i*image_size + j] = (_image(i,j)[0]/255.0 - mean[2])/stdev[2];
+	}
+    } else {
+      for (int i=0;i < image_size;i++)
+	for (int j=0;j < image_size;j++){
+	  image_data[0*image_size*image_size + i*image_size + j] = _image(i,j)[2]/256.0;
+	  image_data[1*image_size*image_size + i*image_size + j] = _image(i,j)[1]/256.0;
+	  image_data[2*image_size*image_size + i*image_size + j] = _image(i,j)[0]/256.0;
+	}
+    }
   }
   //  std::cout << "Orig  0 = " << pixel_orig0 << std::endl;
   //  std::cout << "Orig  1 = " << pixel_orig1 << std::endl;
