@@ -10,8 +10,6 @@ void read_image(std::string filename,enum image_type etype,std::vector<float> &i
   Mat img,scaleimg,cropimg;
   int resize_num, image_size;
 
-  std::cout<<"nhcw = " << is_nhwc << std::endl;
-  
   switch(etype){
   case image_unknown:
     std::cerr << migx_program << ": unknown image type" << std::endl;

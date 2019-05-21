@@ -367,13 +367,13 @@ int main(int argc,char *const argv[],char *const envp[]){
   // read image data if passed
   //  std::vector<float> image_data(3*height*width);
   std::vector<float> image_data;
+  std::vector<float> image_alloc(3*height*width);      
   if (fileinput_type == fileinput_image){
-    std::vector<float> image_alloc(3*height*width);    
-    image_data = image_alloc;
     if (!image_filename.empty()){
       if (is_verbose)
 	std::cout << "reading image: " << image_filename << " " << std::endl;
-      read_image(image_filename,img_type,image_data,model_type == model_tfpb && is_nhwc);
+      read_image(image_filename,img_type,image_alloc,model_type == model_tfpb && is_nhwc);
+      image_data = image_alloc;
     }
   } else if (fileinput_type == fileinput_debug){
     if (!debug_filename.empty()){
@@ -472,16 +472,16 @@ int main(int argc,char *const argv[],char *const envp[]){
       while (1){
 	index >> imagefile >> expected_result;
 	if (index.eof()) break;
-	read_image(imagefile,img_type,image_data,false/*(model_type == model_tfpb)&& is_nhwc*/);
+	read_image(imagefile,img_type,image_alloc,false/*(model_type == model_tfpb)&& is_nhwc*/);
 	count++;
 	if (is_gpu){
 	  pmap[argname] = migraphx::gpu::to_gpu(migraphx::argument{
-	      pmap[argname].get_shape(),image_data.data()});
+	      pmap[argname].get_shape(),image_alloc.data()});
 	  resarg = prog.eval(pmap);
 	  result = migraphx::gpu::from_gpu(resarg);
 	} else {
 	  pmap[argname] = migraphx::argument{
-	    pmap[argname].get_shape(),image_data.data()};
+	    pmap[argname].get_shape(),image_alloc.data()};
 	  result = prog.eval(pmap);
 	}
 	image_top5((float *) result.data(), top5);
