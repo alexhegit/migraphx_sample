@@ -31,6 +31,7 @@
 #include <migraphx/cpu/target.hpp>
 #include <migraphx/generate.hpp>
 #include <migraphx/context.hpp>
+#include <migraphx/quantization.hpp>
 #include "migx.hpp"
 using namespace migraphx;
 std::string migx_program; // argv[0] of this process
@@ -286,7 +287,9 @@ int main(int argc,char *const argv[],char *const envp[]){
   }
 
   // quantize the program
-  if (quantize_type != quantize_none){
+  if (quantize_type == quantize_fp16){
+    quantize(prog);
+  } else if (quantize_type != quantize_none){
     std::cerr << "quantization not yet implemented" << std::endl;
   }
 
