@@ -451,7 +451,12 @@ int main(int argc,char *const argv[],char *const envp[]){
     } else {
       result = prog.eval(pmap);
     }
-    image_top5((float *) result.data(), top5);
+    if (result.get_shape().elements() == 1001){
+      // skip 1st label
+      image_top5(((float *) result.data())+1, top5);      
+    } else {
+      image_top5((float *) result.data(), top5);
+    }
     std::cout << "top1 = " << top5[0] << " " << imagenet_labels[top5[0]] << std::endl;
     std::cout << "top2 = " << top5[1] << " " << imagenet_labels[top5[1]] << std::endl;
     std::cout << "top3 = " << top5[2] << " " << imagenet_labels[top5[2]] << std::endl;
