@@ -494,7 +494,11 @@ int main(int argc,char *const argv[],char *const envp[]){
 	    pmap[argname].get_shape(),image_alloc.data()};
 	  result = prog.eval(pmap);
 	}
-	image_top5((float *) result.data(), top5);
+	if (result.get_shape().elements() == 1001){
+	  image_top5(((float *) result.data())+1, top5);
+	} else {
+	  image_top5((float *) result.data(), top5);
+	}
 	if (top5[0] == expected_result) ntop1++;
 	if (top5[0] == expected_result ||
 	    top5[1] == expected_result ||

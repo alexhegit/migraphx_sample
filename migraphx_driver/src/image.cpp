@@ -26,8 +26,23 @@ void read_image(std::string filename,enum image_type etype,std::vector<float> &i
     std::cout << "imagenet ??? " << etype << std::endl;
     break;
   }
-  double mean[3] = { 0.485,0.456,0.406 };
-  double stdev[3] = { 0.229,0.224,0.225 };
+  double mean[3];
+  double stdev[3];
+  if (is_torchvision){
+    mean[0] = 0.485;
+    mean[1] = 0.456;
+    mean[2] = 0.406;
+    stdev[0] = 0.229;
+    stdev[1] = 0.224;
+    stdev[2] = 0.225;
+  } else {
+    mean[0] = 0.5;
+    mean[1] = 0.5;
+    mean[2] = 0.5;
+    stdev[0] = 0.5;
+    stdev[1] = 0.5;
+    stdev[2] = 0.5;
+  }
   img = imread(filename,CV_LOAD_IMAGE_COLOR);
   Mat_<Vec3b> _img = img;
   int pixel_orig0 = _img(0,0)[0];
@@ -69,21 +84,12 @@ void read_image(std::string filename,enum image_type etype,std::vector<float> &i
 	image_data[3*((i*image_size)+j)+2] = (_image(i,j)[0]/255.0 - mean[2])/stdev[2];		
       }
   } else {
-    if (is_torchvision){
-      for (int i=0;i < image_size;i++)
-	for (int j=0;j < image_size;j++){
-	  image_data[0*image_size*image_size + i*image_size + j] = (_image(i,j)[2]/255.0 - mean[0])/stdev[0];
-	  image_data[1*image_size*image_size + i*image_size + j] = (_image(i,j)[1]/255.0 - mean[1])/stdev[1];
-	  image_data[2*image_size*image_size + i*image_size + j] = (_image(i,j)[0]/255.0 - mean[2])/stdev[2];
-	}
-    } else {
-      for (int i=0;i < image_size;i++)
-	for (int j=0;j < image_size;j++){
-	  image_data[0*image_size*image_size + i*image_size + j] = _image(i,j)[2]/256.0;
-	  image_data[1*image_size*image_size + i*image_size + j] = _image(i,j)[1]/256.0;
-	  image_data[2*image_size*image_size + i*image_size + j] = _image(i,j)[0]/256.0;
-	}
-    }
+    for (int i=0;i < image_size;i++)
+      for (int j=0;j < image_size;j++){
+	image_data[0*image_size*image_size + i*image_size + j] = (_image(i,j)[2]/255.0 - mean[0])/stdev[0];
+	image_data[1*image_size*image_size + i*image_size + j] = (_image(i,j)[1]/255.0 - mean[1])/stdev[1];
+	image_data[2*image_size*image_size + i*image_size + j] = (_image(i,j)[0]/255.0 - mean[2])/stdev[2];
+      }
   }
   //  std::cout << "Orig  0 = " << pixel_orig0 << std::endl;
   //  std::cout << "Orig  1 = " << pixel_orig1 << std::endl;
