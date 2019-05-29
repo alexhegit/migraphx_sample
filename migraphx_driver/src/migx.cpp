@@ -23,6 +23,7 @@
 #include <getopt.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <fcntl.h>
 #include <sys/time.h>
 #include <migraphx/onnx.hpp>
 #include <migraphx/tf.hpp>
@@ -106,26 +107,26 @@ int parse_options(int argc,char *const argv[]){
     { "gpu",     no_argument,       0, 3 },
     { "cpu",     no_argument,       0, 4 },
     { "trace_eval", no_argument,    0, 5 },
-    { "trace_compile", no_argument,    0, 6 },    
-    { "onnx",    required_argument, 0, 7 },
-    { "tfpb",    required_argument, 0, 8 },
-    { "nhwc",    no_argument,       0, 9 },
-    { "nchw",    no_argument,       0, 10 },
-    { "fp16",    no_argument,       0, 11 },
-    { "int8",    no_argument,       0, 12 },
-    { "imagefile", required_argument, 0, 13 },
-    { "debugfile", required_argument, 0, 14 },
-    { "benchmark", no_argument,     0, 15 },
-    { "perf_report", no_argument,   0, 16 },
-    { "imageinfo", no_argument,     0, 17 },
-    { "imagenet", required_argument, 0, 18 },
-    { "mnist", required_argument, 0, 19 },
-    { "print_model", no_argument,   0, 20 },
-    { "eval", no_argument, 0, 21 },
-    { "trim", required_argument, 0, 22 },
-    { "iterations", required_argument, 0, 23 },
-    { "copyarg", no_argument,     0, 24 },
-    { "argname", required_argument, 0, 25 },
+    { "trace_compile", no_argument, 0, 6 },
+    { "onnx",    required_argument, 0, 8 },
+    { "tfpb",    required_argument, 0, 9 },
+    { "nhwc",    no_argument,       0, 10 },
+    { "nchw",    no_argument,       0, 11 },
+    { "fp16",    no_argument,       0, 12 },
+    { "int8",    no_argument,       0, 13 },
+    { "imagefile", required_argument, 0, 14 },
+    { "debugfile", required_argument, 0, 15 },
+    { "benchmark", no_argument,     0, 16 },
+    { "perf_report", no_argument,   0, 17 },
+    { "imageinfo", no_argument,     0, 18 },
+    { "imagenet", required_argument, 0, 19 },
+    { "mnist", required_argument, 0, 20 },
+    { "print_model", no_argument,   0, 21 },
+    { "eval", no_argument, 0, 22 },
+    { "trim", required_argument, 0, 23 },
+    { "iterations", required_argument, 0, 24 },
+    { "copyarg", no_argument,       0, 25 },
+    { "argname", required_argument, 0, 26 },
   };
   while ((opt = getopt_long(argc,argv,"",long_options,NULL)) != -1){
     switch (opt){
@@ -146,82 +147,82 @@ int parse_options(int argc,char *const argv[]){
     case 6:
       trace_compile = true;
       break;
-    case 7:
+    case 8:
       model_type = model_onnx;
       model_filename = optarg;
       break;
-    case 8:
+    case 9:
       model_type = model_tfpb;
       model_filename = optarg;
       break;
-    case 9:
+    case 10:
       is_nhwc = true;
       set_nhwc = true;
       break;
-    case 10:
+    case 11:
       is_nhwc = false;
       break;
-    case 11:
+    case 12:
       quantize_type = quantize_fp16;
       break;
-    case 12:
+    case 13:
       quantize_type = quantize_int8;
       break;
-    case 13:
+    case 14:
       fileinput_type = fileinput_image;
       image_filename = optarg;
       break;
-    case 14:
+    case 15:
       fileinput_type = fileinput_debug;      
       debug_filename = optarg;
       break;
-    case 15:
+    case 16:
       run_type = run_benchmark;
       break;
-    case 16:
+    case 17:
       run_type = run_perfreport;
       break;
-    case 17:
+    case 18:
       run_type = run_imageinfo;
       break;
-    case 18:
+    case 19:
       imagenet_dir = optarg;
       run_type = run_imagenet;
       break;
-    case 19:
+    case 20:
       mnist_dir = optarg;
       run_type = run_mnist;
       break;
-    case 20:
+    case 21:
       if (run_type == run_eval)
 	run_type = run_eval_print;
       else
 	run_type = run_printmodel;
       break;
-    case 21:
+    case 22:
       if (run_type == run_printmodel)
 	run_type = run_eval_print;
       else
 	run_type = run_eval;
       break;
-    case 22:
+    case 23:
       if (std::stoi(optarg) < 0){
 	std::cerr << migx_program << ": trim < 0, ignored" << std::endl;	
       } else {
 	trim_instructions = std::stoi(optarg);
       }
       break;
-    case 23:
+    case 24:
       if (std::stoi(optarg) < 0){
 	std::cerr << migx_program << ": iterations < 0, ignored" << std::endl;
       } else {
 	iterations = std::stoi(optarg);
       }
       break;
-    case 24:
+    case 25:
       copyarg = true;
       break;
-    case 25:
+    case 26:
       argname = optarg;
       break;
     default:
@@ -594,6 +595,7 @@ int main(int argc,char *const argv[],char *const envp[]){
     std::cout << result << std::endl;
     
   }
+
   return 0;
 }
 
