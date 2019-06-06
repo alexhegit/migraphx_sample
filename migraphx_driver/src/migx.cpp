@@ -17,6 +17,7 @@
  *
  * More details about each of these options found with usage statement below.
  */
+#define QUANTIZATION 1
 #include <iostream>
 #include <fstream>
 #include <iomanip>
