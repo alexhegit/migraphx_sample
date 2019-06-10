@@ -15,6 +15,7 @@ echo "FROM $docker_base" > ${DOCKERFILE}
 
 # System pre-requisites
 cat >> $DOCKERFILE <<EOF
+ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update && apt install -y git cmake python-pip python3-pip zlib1g-dev unzip autogen autoconf libtool wget
 RUN apt update && apt install -y libnuma-dev rocm-cmake rocm-libs miopen-hip
 RUN apt update && apt install -y libopencv-dev

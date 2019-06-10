@@ -14,7 +14,7 @@ git checkout v2.2.4
 mkdir build
 cd build
 cmake ..
-make -j
+make -j4
 make install
 
 cd /src/
@@ -24,7 +24,7 @@ git checkout v3.2.1
 git submodule update --init --recursive
 ./autogen.sh
 ./configure
-make -j
+make -j4
 make install
 
 cd /src
@@ -42,7 +42,7 @@ cd $MIGRAPHX_DIR
 mkdir build
 cd build
 env CXX=/opt/rocm/bin/hcc CXXFLAGS="-O3" cmake ..
-make -j
+make -j4
 
 echo "Building migraphx_driver"
 cd $MIGRAPHX_DRIVER_DIR
