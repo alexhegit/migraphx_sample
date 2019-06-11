@@ -9,9 +9,15 @@ if [ -f ${DOCKERFILE} ]; then
     exit 1
 fi
 
-read -p "Enter dockerfile base [rocm/dev-ubuntu-16.04:2.3]: " docker_base
-docker_base=${docker_base:="rocm/dev-ubuntu-16.04:2.3"}
-echo "FROM $docker_base" > ${DOCKERFILE}
+read -p "Enter ROCm version [2.5]: " rocm_version
+rocm_version=${rocm_version:="2.5"}
+
+read -p "Enter Ubuntu version [16.04]: " ubuntu_version
+ubuntu_version=${ubuntu_version:="16.04"}
+
+echo "FROM rocm/dev-ubuntu-${ubuntu_version}:${rocm_version}" > ${DOCKERFILE}
+echo "RUN sed -e 's/debian/${rocm_version}/g' /etc/apt/sources.list.d/rocm.list > /etc/apt/sources.list.d/rocm${rocm_version}.list" >> ${DOCKERFILE}
+echo "RUN rm /etc/apt/sources.list.d/rocm.list" >> ${DOCKERFILE}
 
 # System pre-requisites
 cat >> $DOCKERFILE <<EOF
