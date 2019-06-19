@@ -59,6 +59,7 @@ std::string usage_message =
   "        --int8               quantize operations to int8\n" +
   "    input data\n" +
   "        --imagefile=<filename>\n"
+  "        --random_input       create random input for argument\n"
   "        --debugfile=<filename> ASCII file of floating numbers\n" +
   "    running\n" +
   "        --perf_report        run migraphx perf report including times per instruction\n" +
@@ -95,6 +96,7 @@ bool trace_eval = false;
 std::string trace_eval_var = "MIGRAPHX_TRACE_EVAL=1";
 bool trace_compile = false;
 std::string trace_compile_var = "MIGRAPHX_TRACE_COMPILE=1";
+bool has_random_input = false;
 
 /* parse_options
  *
@@ -116,18 +118,19 @@ int parse_options(int argc,char *const argv[]){
     { "fp16",    no_argument,       0, 12 },
     { "int8",    no_argument,       0, 13 },
     { "imagefile", required_argument, 0, 14 },
-    { "debugfile", required_argument, 0, 15 },
-    { "benchmark", no_argument,     0, 16 },
-    { "perf_report", no_argument,   0, 17 },
-    { "imageinfo", no_argument,     0, 18 },
-    { "imagenet", required_argument, 0, 19 },
-    { "mnist", required_argument, 0, 20 },
-    { "print_model", no_argument,   0, 21 },
-    { "eval", no_argument, 0, 22 },
-    { "trim", required_argument, 0, 23 },
-    { "iterations", required_argument, 0, 24 },
-    { "copyarg", no_argument,       0, 25 },
-    { "argname", required_argument, 0, 26 },
+    { "random_input", no_argument,  0, 15 },
+    { "debugfile", required_argument, 0, 16 },
+    { "benchmark", no_argument,     0, 17 },
+    { "perf_report", no_argument,   0, 18 },
+    { "imageinfo", no_argument,     0, 19 },
+    { "imagenet", required_argument, 0, 20 },
+    { "mnist", required_argument, 0, 21 },
+    { "print_model", no_argument,   0, 22 },
+    { "eval", no_argument, 0, 23 },
+    { "trim", required_argument, 0, 24 },
+    { "iterations", required_argument, 0, 25 },
+    { "copyarg", no_argument,       0, 26 },
+    { "argname", required_argument, 0, 27 },
   };
   while ((opt = getopt_long(argc,argv,"",long_options,NULL)) != -1){
     switch (opt){
@@ -174,56 +177,59 @@ int parse_options(int argc,char *const argv[]){
       image_filename = optarg;
       break;
     case 15:
+      has_random_input = true;
+      break;
+    case 16:
       fileinput_type = fileinput_debug;      
       debug_filename = optarg;
       break;
-    case 16:
+    case 17:
       run_type = run_benchmark;
       break;
-    case 17:
+    case 18:
       run_type = run_perfreport;
       break;
-    case 18:
+    case 19:
       run_type = run_imageinfo;
       break;
-    case 19:
+    case 20:
       imagenet_dir = optarg;
       run_type = run_imagenet;
       break;
-    case 20:
+    case 21:
       mnist_dir = optarg;
       run_type = run_mnist;
       break;
-    case 21:
+    case 22:
       if (run_type == run_eval)
 	run_type = run_eval_print;
       else
 	run_type = run_printmodel;
       break;
-    case 22:
+    case 23:
       if (run_type == run_printmodel)
 	run_type = run_eval_print;
       else
 	run_type = run_eval;
       break;
-    case 23:
+    case 24:
       if (std::stoi(optarg) < 0){
 	std::cerr << migx_program << ": trim < 0, ignored" << std::endl;	
       } else {
 	trim_instructions = std::stoi(optarg);
       }
       break;
-    case 24:
+    case 25:
       if (std::stoi(optarg) < 0){
 	std::cerr << migx_program << ": iterations < 0, ignored" << std::endl;
       } else {
 	iterations = std::stoi(optarg);
       }
       break;
-    case 25:
+    case 26:
       copyarg = true;
       break;
-    case 26:
+    case 27:
       argname = optarg;
       break;
     default:
@@ -332,7 +338,9 @@ int main(int argc,char *const argv[],char *const envp[]){
       argshape = x.second;
       argname_found = true;
     }
-    if (is_gpu)
+    if (is_gpu && has_random_input)
+      pmap[x.first] = migraphx::gpu::to_gpu(migraphx::generate_argument(x.second));
+    else if (is_gpu)
       pmap[x.first] = migraphx::gpu::allocate_gpu(x.second);
     else
       pmap[x.first] = migraphx::generate_argument(x.second,get_hash(x.first));
