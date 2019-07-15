@@ -66,6 +66,8 @@ std::string usage_message =
   "        --benchmark          run model repeatedly and time results\n" +
   "        --imageinfo          run model once and report top5 buckets for an image\n" +
   "        --imagenet=<dir>     run model on an imagenet directory\n" +
+  "        --glue=<test>        run model using glue test config (CoLA, MNLI, MRPC, QNLI, QQP, RTE, SNLI, SST-2, STS-B, WNLI\n" +
+  "        --gluedir=<dir>      pointer to the glue_data directory\n" +
   "        --mnist=<dir>        run model on mnist directory\n"
   "        --print_model        show MIGraphX instructions for model\n" +
   "        --eval               run model and dump output to stdout\n" +
@@ -81,7 +83,9 @@ std::string model_filename;
 bool is_nhwc = true;
 bool set_nhwc = false;
 enum quantize_type { quantize_none, quantize_fp16, quantize_int8 } quantize_type = quantize_none;
-enum run_type { run_none, run_benchmark, run_perfreport, run_imageinfo, run_imagenet, run_mnist, run_printmodel, run_eval, run_eval_print } run_type = run_none;
+enum run_type { run_none, run_benchmark, run_perfreport, run_imageinfo, run_imagenet, run_glue, run_mnist, run_printmodel, run_eval, run_eval_print } run_type = run_none;
+enum glue_type glue_type = glue_none;
+std::string glue_dir;
 int iterations = 1000;
 bool copyarg = false;
 std::string argname = "0";
@@ -124,13 +128,15 @@ int parse_options(int argc,char *const argv[]){
     { "perf_report", no_argument,   0, 18 },
     { "imageinfo", no_argument,     0, 19 },
     { "imagenet", required_argument, 0, 20 },
-    { "mnist", required_argument, 0, 21 },
-    { "print_model", no_argument,   0, 22 },
-    { "eval", no_argument, 0, 23 },
-    { "trim", required_argument, 0, 24 },
-    { "iterations", required_argument, 0, 25 },
-    { "copyarg", no_argument,       0, 26 },
-    { "argname", required_argument, 0, 27 },
+    { "glue", required_argument, 0, 21 },
+    { "gluedir", required_argument, 0, 22 },
+    { "mnist", required_argument, 0, 23 },
+    { "print_model", no_argument,   0, 24 },
+    { "eval", no_argument, 0, 25 },
+    { "trim", required_argument, 0, 26 },
+    { "iterations", required_argument, 0, 27 },
+    { "copyarg", no_argument,       0, 28 },
+    { "argname", required_argument, 0, 29 },
   };
   while ((opt = getopt_long(argc,argv,"",long_options,NULL)) != -1){
     switch (opt){
@@ -197,44 +203,79 @@ int parse_options(int argc,char *const argv[]){
       run_type = run_imagenet;
       break;
     case 21:
+      run_type = run_glue;
+      if (optarg == std::string("CoLA"))
+	glue_type = glue_cola;
+      else if (optarg == std::string("MNLI"))
+	glue_type = glue_mnli;
+      else if (optarg == std::string("MRPC"))
+	glue_type = glue_mrpc;
+      else if (optarg == std::string("QNLI"))
+	glue_type = glue_qnli;
+      else if (optarg == std::string("QQP"))
+	glue_type = glue_qqp;
+      else if (optarg == std::string("RTE"))
+	glue_type = glue_rte;
+      else if (optarg == std::string("SNLI"))
+	glue_type = glue_snli;
+      else if (optarg == std::string("SST-2"))
+	glue_type = glue_sst;
+      else if (optarg == std::string("STS-B"))
+	glue_type = glue_sts;
+      else if (optarg == std::string("WNLI"))
+	glue_type = glue_wnli;
+      else {
+	std::cerr << migx_program << ": invalid argument to --glue, expecting one of: CoLA, MNLI, MRPC, QNLI, QQP, RTE, SNLI, SST-2, STS-B, WNLI" << std::endl;
+	return 1;
+      }
+      break;
+    case 22:
+      glue_dir = optarg;
+      break;
+    case 23:
       mnist_dir = optarg;
       run_type = run_mnist;
       break;
-    case 22:
+    case 24:
       if (run_type == run_eval)
 	run_type = run_eval_print;
       else
 	run_type = run_printmodel;
       break;
-    case 23:
+    case 25:
       if (run_type == run_printmodel)
 	run_type = run_eval_print;
       else
 	run_type = run_eval;
       break;
-    case 24:
+    case 26:
       if (std::stoi(optarg) < 0){
 	std::cerr << migx_program << ": trim < 0, ignored" << std::endl;	
       } else {
 	trim_instructions = std::stoi(optarg);
       }
       break;
-    case 25:
+    case 27:
       if (std::stoi(optarg) < 0){
 	std::cerr << migx_program << ": iterations < 0, ignored" << std::endl;
       } else {
 	iterations = std::stoi(optarg);
       }
       break;
-    case 26:
+    case 28:
       copyarg = true;
       break;
-    case 27:
+    case 29:
       argname = optarg;
       break;
     default:
       return 1;
     }
+  }
+  // temporary hack for GLUE...
+  if (run_type == run_glue){
+    dump_glue(glue_type, glue_dir);
+    exit(0);
   }
   if (model_type == model_unknown){
     std::cerr << migx_program << ": either --onnx or --tfpb must be given" << std::endl;
@@ -521,6 +562,13 @@ int main(int argc,char *const argv[],char *const envp[]){
       std::cout << "Overall - top1: " << (double) ntop1/count << " top5: " << (double) ntop5/count << std::endl;
     }
     break;
+  case run_glue:
+    if (glue_dir.empty()){
+      std::cerr << migx_program << ": missing --glue_dir" << std::endl;
+      return 1;
+    }
+    dump_glue(glue_type, glue_dir);
+    break;
   case run_mnist:
     {
       int i,j;
@@ -607,4 +655,3 @@ int main(int argc,char *const argv[],char *const envp[]){
 
   return 0;
 }
-

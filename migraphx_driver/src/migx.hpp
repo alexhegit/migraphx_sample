@@ -6,6 +6,7 @@ extern std::string migx_program;
 extern const char *imagenet_labels[];
 enum image_type { image_unknown=0, image_imagenet224, image_imagenet299, image_mnist };
 extern bool is_verbose;
+enum glue_type { glue_none, glue_cola, glue_mnli, glue_mrpc, glue_qnli, glue_qqp, glue_rte, glue_snli, glue_sst, glue_sts, glue_wnli };
 
 void rimage(std::vector<float> &img_data);
 
@@ -19,3 +20,5 @@ void debug_mnist(std::vector<float> &img_data);
 void finish_mnist_streams();
 
 void read_float_file(std::string filename,std::vector<float> &img_data);
+
+int dump_glue(enum glue_type gtype, std::string glue_dir);
