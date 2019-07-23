@@ -10,4 +10,6 @@ generate_onnx.sh - This script runs BERT model to fine-tune a task and then expo
 
 glue_dump.sh - This script exports glue_data to show TSV file components for various subsets
 
+bert_tokenize.py - example script that shows how the BERT tokenizer is called.
+
 NOTE: run_glue, utils_glue.py are unchanged copies from github.com/pytorch-transformers/examples directory.

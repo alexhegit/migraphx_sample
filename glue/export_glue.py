@@ -1,13 +1,6 @@
 import torch
 import numpy as np
 
-#from pytorch_transformers import (BertConfig,
-#                                  BertForSequenceClassification, BertTokenizer,
-#                                  XLMConfig, XLMForSequenceClassification,
-#                                  XLMTokenizer, XLNetConfig,
-#                                  XLNetForSequenceClassification,
-#                                  XLNetTokenizer)
-
 from pytorch_transformers import (BertConfig, BertForSequenceClassification, BertTokenizer)
 
 from utils_glue import (processors)
