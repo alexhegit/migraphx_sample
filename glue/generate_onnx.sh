@@ -7,7 +7,7 @@
 # Then run this script in the pytorch-transformers/examples directory
 GLUE_TASK=${GLUE_TASK:="MRPC"}
 BERT_MODEL=${BERT_MODEL:="bert-base-cased"}
-GLUE_DATADIR=${GLUE_DATADIR:="./glue/glue_data/${GLUE_TASK}"}
+GLUE_DATADIR=${GLUE_DATADIR:="./glue_data/${GLUE_TASK}"}
 OUTPUT_DIR=${OUTPUT_DIR:="./checkpoint/${GLUE_TASK}"}
 
 # run model to create checkpoints
