@@ -9,3 +9,5 @@ generate_onnx.sh - This script runs BERT model to fine-tune a task and then expo
    utils_glue.py - is utility file copied from pytorch-transformers
 
 glue_dump.sh - This script exports glue_data to show TSV file components for various subsets
+
+NOTE: run_glue, utils_glue.py are unchanged copies from github.com/pytorch-transformers/examples directory.
