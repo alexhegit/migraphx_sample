@@ -1,6 +1,7 @@
 // definitions for migx driver
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 extern std::string migx_program;
 extern const char *imagenet_labels[];
@@ -21,4 +22,5 @@ void finish_mnist_streams();
 
 void read_float_file(std::string filename,std::vector<float> &img_data);
 
-int dump_glue(enum glue_type gtype, std::string glue_dir);
+int parse_line(std::string& line, std::size_t sent_size, 
+	       std::unordered_map<std::string, std::vector<int64_t>>& input_map);

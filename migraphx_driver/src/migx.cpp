@@ -59,6 +59,7 @@ std::string usage_message =
   "        --int8               quantize operations to int8\n" +
   "    input data\n" +
   "        --imagefile=<filename>\n"
+  "        --gluefile=<filename> pointer to the glue tab-separated token file, e.g. MRPC.tst\n" +
   "        --random_input       create random input for argument\n"
   "        --debugfile=<filename> ASCII file of floating numbers\n" +
   "    running\n" +
@@ -67,7 +68,6 @@ std::string usage_message =
   "        --imageinfo          run model once and report top5 buckets for an image\n" +
   "        --imagenet=<dir>     run model on an imagenet directory\n" +
   "        --glue=<test>        run model using glue test config (CoLA, MNLI, MRPC, QNLI, QQP, RTE, SNLI, SST-2, STS-B, WNLI\n" +
-  "        --gluedir=<dir>      pointer to the glue_data directory\n" +
   "        --mnist=<dir>        run model on mnist directory\n"
   "        --print_model        show MIGraphX instructions for model\n" +
   "        --eval               run model and dump output to stdout\n" +
@@ -85,7 +85,7 @@ bool set_nhwc = false;
 enum quantize_type { quantize_none, quantize_fp16, quantize_int8 } quantize_type = quantize_none;
 enum run_type { run_none, run_benchmark, run_perfreport, run_imageinfo, run_imagenet, run_glue, run_mnist, run_printmodel, run_eval, run_eval_print } run_type = run_none;
 enum glue_type glue_type = glue_none;
-std::string glue_dir;
+std::string glue_file;
 int iterations = 1000;
 bool copyarg = false;
 std::string argname = "0";
@@ -122,14 +122,14 @@ int parse_options(int argc,char *const argv[]){
     { "fp16",    no_argument,       0, 12 },
     { "int8",    no_argument,       0, 13 },
     { "imagefile", required_argument, 0, 14 },
-    { "random_input", no_argument,  0, 15 },
-    { "debugfile", required_argument, 0, 16 },
-    { "benchmark", no_argument,     0, 17 },
-    { "perf_report", no_argument,   0, 18 },
-    { "imageinfo", no_argument,     0, 19 },
-    { "imagenet", required_argument, 0, 20 },
-    { "glue", required_argument, 0, 21 },
-    { "gluedir", required_argument, 0, 22 },
+    { "gluefile", required_argument, 0, 15 },
+    { "random_input", no_argument,  0, 16 },
+    { "debugfile", required_argument, 0, 17 },
+    { "benchmark", no_argument,     0, 18 },
+    { "perf_report", no_argument,   0, 19 },
+    { "imageinfo", no_argument,     0, 20 },
+    { "imagenet", required_argument, 0, 21 },
+    { "glue", required_argument, 0, 22 },
     { "mnist", required_argument, 0, 23 },
     { "print_model", no_argument,   0, 24 },
     { "eval", no_argument, 0, 25 },
@@ -183,26 +183,29 @@ int parse_options(int argc,char *const argv[]){
       image_filename = optarg;
       break;
     case 15:
-      has_random_input = true;
+      glue_file = optarg;
       break;
     case 16:
+      has_random_input = true;
+      break;
+    case 17:
       fileinput_type = fileinput_debug;      
       debug_filename = optarg;
       break;
-    case 17:
+    case 18:
       run_type = run_benchmark;
       break;
-    case 18:
+    case 19:
       run_type = run_perfreport;
       break;
-    case 19:
+    case 20:
       run_type = run_imageinfo;
       break;
-    case 20:
+    case 21:
       imagenet_dir = optarg;
       run_type = run_imagenet;
       break;
-    case 21:
+    case 22:
       run_type = run_glue;
       if (optarg == std::string("CoLA"))
 	glue_type = glue_cola;
@@ -228,9 +231,6 @@ int parse_options(int argc,char *const argv[]){
 	std::cerr << migx_program << ": invalid argument to --glue, expecting one of: CoLA, MNLI, MRPC, QNLI, QQP, RTE, SNLI, SST-2, STS-B, WNLI" << std::endl;
 	return 1;
       }
-      break;
-    case 22:
-      glue_dir = optarg;
       break;
     case 23:
       mnist_dir = optarg;
@@ -272,11 +272,6 @@ int parse_options(int argc,char *const argv[]){
       return 1;
     }
   }
-  // temporary hack for GLUE...
-  if (run_type == run_glue){
-    dump_glue(glue_type, glue_dir);
-    exit(0);
-  }
   if (model_type == model_unknown){
     std::cerr << migx_program << ": either --onnx or --tfpb must be given" << std::endl;
     return 1;
@@ -287,6 +282,10 @@ int parse_options(int argc,char *const argv[]){
   }  
   if ((run_type == run_imageinfo) && image_filename.empty()){
     std::cerr << migx_program << ": --imageinfo requires --imagefile option" << std::endl;
+    return 1;
+  }
+  if ((glue_type != glue_none) && (glue_file.empty())){
+    std::cerr << migx_program << ": --glue= requires --gluefile option" << std::endl;
     return 1;
   }
   return 0;
@@ -389,7 +388,7 @@ int main(int argc,char *const argv[],char *const envp[]){
 
   // pattern match argument names and types
   enum image_type img_type;
-  if (argname_found == false){
+  if (argname_found == false && glue_type == glue_none){
     std::cerr << "input argument: " << argname << " not found, use --argname to pick from following candidates" << std::endl;
     for (auto&& x: prog.get_parameter_shapes()){
       std::cout << "\t" << x.first << std::endl;
@@ -440,6 +439,38 @@ int main(int argc,char *const argv[],char *const envp[]){
     if (image_data.size() < argshape.elements()){
       std::cerr << migx_program << ": model requires " << argshape.elements() << " inputs, only " << image_data.size() << " provided" << std::endl;
       return 1;
+    }
+  }
+
+  // prime glue with data if necessary...
+  if (glue_type != glue_none && run_type != run_glue && !has_random_input){
+    std::ifstream glue_stream(glue_file);
+    if (!glue_stream.is_open()){
+      std::cerr << migx_program << ": can not open gluefile: " << glue_file << std::endl;
+      return 1;
+    }
+    std::string line;
+    // TODO: hard coded for MRPC for now
+    std::getline(glue_stream,line); // skip first line      
+    std::unordered_map<std::string, std::vector<int64_t>> input_map;
+    input_map["input.1"];
+    input_map["input.3"];
+    input_map["2"];
+    std::getline(glue_stream,line);
+    int label = parse_line(line,128, input_map);
+    // copy the arguments
+    for (auto &&x : prog.get_parameter_shapes()){
+      migraphx::argument arg{};
+      if (input_map.count(x.first) > 0){
+	arg = migraphx::argument(x.second,input_map[x.first].data());
+      } else {
+	arg = migraphx::generate_argument(x.second,get_hash(x.first));
+      }
+      if (is_gpu){
+	pmap[x.first] = migraphx::gpu::to_gpu(arg);
+      } else {
+	pmap[x.first] = arg;
+      }
     }
   }
 
@@ -563,11 +594,55 @@ int main(int argc,char *const argv[],char *const envp[]){
     }
     break;
   case run_glue:
-    if (glue_dir.empty()){
-      std::cerr << migx_program << ": missing --glue_dir" << std::endl;
-      return 1;
+    {
+      std::ifstream glue_stream(glue_file);
+      if (!glue_stream.is_open()){
+	std::cerr << migx_program << ": can not open gluefile: " << glue_file << std::endl;
+	return 1;
+      }
+      std::string line;
+      // TODO: hard coded for MRPC for now
+      std::getline(glue_stream,line); // skip first line      
+      std::unordered_map<std::string, std::vector<int64_t>> input_map;
+      input_map["input.1"];
+      input_map["input.3"];
+      input_map["2"];
+      int accu_count = 0, total_count = 0;
+      while (1){
+	std::getline(glue_stream,line);
+	if (line.empty()) break;
+	int label = parse_line(line,128, input_map);
+	// copy the arguments
+	for (auto &&x : prog.get_parameter_shapes()){
+	  migraphx::argument arg{};
+	  if (input_map.count(x.first) > 0){
+	    arg = migraphx::argument(x.second,input_map[x.first].data());
+	  } else {
+	    arg = migraphx::generate_argument(x.second,get_hash(x.first));
+	  }
+	  if (is_gpu){
+	    pmap[x.first] = migraphx::gpu::to_gpu(arg);
+	  } else {
+	    pmap[x.first] = arg;
+	  }
+	}
+	// evaluate result
+	migraphx::argument result;
+	if (is_gpu){
+	  result = migraphx::gpu::from_gpu(prog.eval(pmap));
+	} else {
+	  result = prog.eval(pmap);
+	}
+	std::vector<float> vec_output;
+	result.visit([&](auto output){ vec_output.assign(output.begin(),output.end()); });
+	if (is_verbose)
+	  std::cout << "[" << vec_output[0] << "," << vec_output[1] << "]" << std::endl;
+	int calc_label = (vec_output[0] >= vec_output[1]) ? 0 : 1;
+	accu_count += (calc_label == label) ? 1 : 0;
+	total_count++;
+      }
+      std::cout << "accuracy rate = " << 1.0 * accu_count / total_count << std::endl;
     }
-    dump_glue(glue_type, glue_dir);
     break;
   case run_mnist:
     {

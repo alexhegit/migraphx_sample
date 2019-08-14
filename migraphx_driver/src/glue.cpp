@@ -2,46 +2,51 @@
  * glue.cpp - read and return strings for GLUE benchmark data
  *
  */
-#include <iostream>
-#include <fstream>
+#include <vector>
 #include <string>
-#include "migx.hpp"
-#include <sys/stat.h>
+#include <unordered_map>
 
-struct glue_config {
-  enum glue_type gtype;
-  std::string val; // filename, relative to glue_dir
-  int label_field; // TSV column
-  int sent1_field; // TSV column
-  int sent2_field; // TSV column
-} glue_config_db[] = {
-  { glue_cola, std::string("/CoLA/dev.tsv"), 2, 4, -1 },
-};
-int num_glue_config = sizeof(glue_config_db)/sizeof(glue_config_db[0]);
-
-int dump_glue(enum glue_type gtype, std::string glue_dir){
-  struct stat statbuf;
-
-  if (glue_dir.empty() || stat(glue_dir.c_str(),&statbuf)){
-    std::cerr << migx_program << ": invalid --gluedir" << std::endl;
-    return 1;
-  } else if (!S_ISDIR(statbuf.st_mode)){
-    std::cerr << migx_program << ": invalid --gluedir, not a directory" << std::endl;
-    return 1;
-  }
-
-  int glue_idx;
-  bool found = false;
-  for (glue_idx = 0;glue_idx < num_glue_config; glue_idx++){
-    if (glue_config_db[glue_idx].gtype == gtype){
-      found = true;
-      break;
+void parse_sentence(const std::string& sent, std::vector<int64_t>& vec_feature)
+{
+    size_t pos = 0, pos_next;
+    size_t index = 0;
+    while ((pos_next = sent.find(',', pos)) != std::string::npos)
+    {
+        auto word_feature = sent.substr(pos, pos_next);
+        vec_feature.push_back(std::stoll(word_feature));
+        pos = pos_next + 1;
     }
-  }
+    vec_feature.push_back(std::stoll(sent.substr(pos)));
+    vec_feature.push_back(102);
+}
 
-  if (!found){
-    std::cerr << migx_program << ": --glue= test type not implemented" << std::endl;
-    return 1;
-  }
-  return 0;
+int parse_line(std::string& line, std::size_t sent_size, 
+        std::unordered_map<std::string, std::vector<int64_t>>& input_map)
+{
+    auto& vec_feature = input_map["input.1"];
+    auto& vec_id = input_map["input.3"];
+    auto& seg_id = input_map["2"];
+    vec_feature.clear();
+    vec_id.clear();
+    seg_id.clear();
+
+    size_t pos = line.find('\t');
+    int label = std::stoi(line.substr(0, pos));
+
+    ++pos;
+    size_t pos_next = line.find('\t', pos);
+    vec_feature.push_back(101);
+    parse_sentence(line.substr(pos, pos_next), vec_feature);
+    vec_id.resize(vec_feature.size(), 0);
+
+    pos = pos_next + 1;
+    parse_sentence(line.substr(pos), vec_feature);
+    vec_id.resize(vec_feature.size(), 1);
+    seg_id.resize(vec_feature.size(), 1);
+
+    vec_feature.resize(sent_size, 0);
+    vec_id.resize(sent_size, 0);
+    seg_id.resize(sent_size, 0);
+
+    return label;
 }
