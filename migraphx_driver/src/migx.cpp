@@ -17,7 +17,6 @@
  *
  * More details about each of these options found with usage statement below.
  */
-#define QUANTIZATION 1
 #include <iostream>
 #include <fstream>
 #include <iomanip>
@@ -33,9 +32,7 @@
 #include <migraphx/cpu/target.hpp>
 #include <migraphx/generate.hpp>
 #include <migraphx/context.hpp>
-#ifdef QUANTIZATION
 #include <migraphx/quantization.hpp>
-#endif
 #include "migx.hpp"
 using namespace migraphx;
 std::string migx_program; // argv[0] of this process
@@ -86,6 +83,7 @@ enum quantize_type { quantize_none, quantize_fp16, quantize_int8 } quantize_type
 enum run_type { run_none, run_benchmark, run_perfreport, run_imageinfo, run_imagenet, run_glue, run_mnist, run_printmodel, run_eval, run_eval_print } run_type = run_none;
 enum glue_type glue_type = glue_none;
 std::string glue_file;
+int glue_batch_size = 1;
 int iterations = 1000;
 bool copyarg = false;
 std::string argname = "0";
@@ -336,12 +334,10 @@ int main(int argc,char *const argv[],char *const envp[]){
     }
   }
 
-#ifdef QUANTIZATION
   // quantize the program
   if (quantize_type == quantize_fp16){
     quantize(prog);
   } else
-#endif
     if (quantize_type != quantize_none){
     std::cerr << "quantization not yet implemented" << std::endl;
   }
@@ -372,8 +368,15 @@ int main(int argc,char *const argv[],char *const envp[]){
   shape argshape;
   int batch_size=1, channels=1, height=1, width=1;  
   for (auto&& x: prog.get_parameter_shapes()){
-    if (is_verbose)
-      std::cout << "parameter: " << x.first << std::endl;      
+    if (is_verbose){
+      std::cout << "parameter: " << x.first;
+      std::cout << " shape = [";
+      for (int i=0;i<x.second.lens().size();i++){
+	if (i!=0) std::cout << ",";
+	std::cout << x.second.lens()[i];
+      }
+      std::cout << "]" << std::endl;
+    }
     if (x.first == argname){
       argshape = x.second;
       argname_found = true;
@@ -465,6 +468,11 @@ int main(int argc,char *const argv[],char *const envp[]){
 	arg = migraphx::argument(x.second,input_map[x.first].data());
       } else {
 	arg = migraphx::generate_argument(x.second,get_hash(x.first));
+      }
+      if (x.first == "output"){
+	glue_batch_size = x.second.lens()[0];
+	if (is_verbose)
+	  std::cout << "glue batch size = " << glue_batch_size << std::endl;
       }
       if (is_gpu){
 	pmap[x.first] = migraphx::gpu::to_gpu(arg);
