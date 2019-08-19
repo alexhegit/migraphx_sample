@@ -135,6 +135,7 @@ int parse_options(int argc,char *const argv[]){
     { "iterations", required_argument, 0, 27 },
     { "copyarg", no_argument,       0, 28 },
     { "argname", required_argument, 0, 29 },
+    { 0,         0,                 0, 0  },
   };
   while ((opt = getopt_long(argc,argv,"",long_options,NULL)) != -1){
     switch (opt){
@@ -445,6 +446,16 @@ int main(int argc,char *const argv[],char *const envp[]){
     }
   }
 
+  // find the glue batch size
+  if (glue_type != glue_none){
+    auto param_shapes = prog.get_parameter_shapes();
+    if (param_shapes.count("input.1") > 0){
+      glue_batch_size = param_shapes["input.1"].lens()[0];
+      if (is_verbose)
+	std::cout << "glue batch size = " << glue_batch_size << std::endl;      
+    }
+  }
+
   // prime glue with data if necessary...
   if (glue_type != glue_none && run_type != run_glue && !has_random_input){
     std::ifstream glue_stream(glue_file);
@@ -459,8 +470,21 @@ int main(int argc,char *const argv[],char *const envp[]){
     input_map["input.1"];
     input_map["input.3"];
     input_map["2"];
-    std::getline(glue_stream,line);
-    int label = parse_line(line,128, input_map);
+    std::unordered_map<std::string, std::vector<int64_t>> sent_tokens;
+    sent_tokens["input.1"];
+    sent_tokens["input.3"];
+    sent_tokens["2"];
+    std::vector<int> vec_labels;
+    for (std::size_t batch_no = 0; batch_no < glue_batch_size; batch_no++){
+      std::getline(glue_stream,line);
+      if (line.empty()) break;
+      int label = parse_line(line,128,sent_tokens);
+      vec_labels.push_back(label);
+      input_map["input.1"].insert(input_map["input.1"].end(),sent_tokens["input.1"].begin(),sent_tokens["input.1"].end());
+      input_map["input.3"].insert(input_map["input.3"].end(),sent_tokens["input.3"].begin(),sent_tokens["input.3"].end());
+      input_map["2"].insert(input_map["2"].end(),sent_tokens["2"].begin(),sent_tokens["2"].end());      
+    }
+    
     // copy the arguments
     for (auto &&x : prog.get_parameter_shapes()){
       migraphx::argument arg{};
@@ -468,11 +492,6 @@ int main(int argc,char *const argv[],char *const envp[]){
 	arg = migraphx::argument(x.second,input_map[x.first].data());
       } else {
 	arg = migraphx::generate_argument(x.second,get_hash(x.first));
-      }
-      if (x.first == "output"){
-	glue_batch_size = x.second.lens()[0];
-	if (is_verbose)
-	  std::cout << "glue batch size = " << glue_batch_size << std::endl;
       }
       if (is_gpu){
 	pmap[x.first] = migraphx::gpu::to_gpu(arg);
@@ -500,6 +519,7 @@ int main(int argc,char *const argv[],char *const envp[]){
     if (is_verbose && iterations > 1){
       std::cout << "running           " << iterations << " iterations" << std::endl;
     }
+    if (glue_batch_size != 1) batch_size = glue_batch_size;
     start_time = get_time();
     for (i = 0;i < iterations;i++){
       if (is_gpu){
