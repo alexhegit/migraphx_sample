@@ -83,6 +83,9 @@ enum quantize_type { quantize_none, quantize_fp16, quantize_int8 } quantize_type
 enum run_type { run_none, run_benchmark, run_perfreport, run_imageinfo, run_imagenet, run_glue, run_mnist, run_printmodel, run_eval, run_eval_print } run_type = run_none;
 enum glue_type glue_type = glue_none;
 std::string glue_file;
+std::string glue_arg1;
+std::string glue_arg2;
+std::string glue_arg3;
 int glue_batch_size = 1;
 int iterations = 1000;
 bool copyarg = false;
@@ -446,16 +449,27 @@ int main(int argc,char *const argv[],char *const envp[]){
     }
   }
 
-  // find the glue batch size
+  // find the glue batch size and set the parameter names
   if (glue_type != glue_none){
+    if (model_type == model_onnx){
+      glue_arg1 = "input.1";
+      glue_arg2 = "input.3";
+      glue_arg3 = "2";
+    } else if (model_type == model_tfpb){
+      glue_arg1 = "input_ids_1";
+      glue_arg2 = "input_mask_1";
+      glue_arg3 = "segment_ids_1";      
+    }
+    
     auto param_shapes = prog.get_parameter_shapes();
-    if (param_shapes.count("input.1") > 0){
-      glue_batch_size = param_shapes["input.1"].lens()[0];
-      if (is_verbose)
-	std::cout << "glue batch size = " << glue_batch_size << std::endl;      
+    if (param_shapes.count(glue_arg1) > 0){
+      glue_batch_size = param_shapes[glue_arg1].lens()[0];
+    }
+
+    if (is_verbose){
+      std::cout << "glue batch size = " << glue_batch_size << std::endl;      
     }
   }
-
   // prime glue with data if necessary...
   if (glue_type != glue_none && run_type != run_glue && !has_random_input){
     std::ifstream glue_stream(glue_file);
@@ -464,25 +478,45 @@ int main(int argc,char *const argv[],char *const envp[]){
       return 1;
     }
     std::string line;
-    // TODO: hard coded for MRPC for now
+    // TODO: parameters hard coded for MRPC for now
     std::getline(glue_stream,line); // skip first line      
     std::unordered_map<std::string, std::vector<int64_t>> input_map;
-    input_map["input.1"];
-    input_map["input.3"];
-    input_map["2"];
+    input_map[glue_arg1];
+    input_map[glue_arg2];
+    input_map[glue_arg3];    
     std::unordered_map<std::string, std::vector<int64_t>> sent_tokens;
-    sent_tokens["input.1"];
-    sent_tokens["input.3"];
-    sent_tokens["2"];
+    sent_tokens["vec_feature"];
+    sent_tokens["vec_id"];
+    sent_tokens["seg_id"];
     std::vector<int> vec_labels;
     for (std::size_t batch_no = 0; batch_no < glue_batch_size; batch_no++){
       std::getline(glue_stream,line);
       if (line.empty()) break;
       int label = parse_line(line,128,sent_tokens);
       vec_labels.push_back(label);
-      input_map["input.1"].insert(input_map["input.1"].end(),sent_tokens["input.1"].begin(),sent_tokens["input.1"].end());
-      input_map["input.3"].insert(input_map["input.3"].end(),sent_tokens["input.3"].begin(),sent_tokens["input.3"].end());
-      input_map["2"].insert(input_map["2"].end(),sent_tokens["2"].begin(),sent_tokens["2"].end());      
+      input_map[glue_arg1].insert(input_map[glue_arg1].end(),sent_tokens["vec_feature"].begin(),sent_tokens["vec_feature"].end());
+      input_map[glue_arg2].insert(input_map[glue_arg2].end(),sent_tokens["vec_id"].begin(),sent_tokens["vec_id"].end());
+      input_map[glue_arg3].insert(input_map[glue_arg3].end(),sent_tokens["seg_id"].begin(),sent_tokens["seg_id"].end());      
+    }
+
+    if (is_verbose){
+      std::cout << "input_map[\"input.1\"] :";
+      for (int i=0; i < input_map[glue_arg1].size();i++){
+	std::cout << " " << input_map[glue_arg1][i];
+      }
+      std::cout << std::endl;
+
+      std::cout << "input_map[\"input.3\"] :";
+      for (int i=0; i < input_map[glue_arg2].size();i++){
+	std::cout << " " << input_map[glue_arg2][i];
+      }
+      std::cout << std::endl;
+
+      std::cout << "input_map[\"2\"] :";
+      for (int i=0; i < input_map[glue_arg3].size();i++){
+	std::cout << " " << input_map[glue_arg3][i];
+      }
+      std::cout << std::endl;
     }
     
     // copy the arguments
@@ -629,17 +663,32 @@ int main(int argc,char *const argv[],char *const envp[]){
 	return 1;
       }
       std::string line;
-      // TODO: hard coded for MRPC for now
+      // TODO: parameters hard coded for MRPC for now
       std::getline(glue_stream,line); // skip first line      
-      std::unordered_map<std::string, std::vector<int64_t>> input_map;
-      input_map["input.1"];
-      input_map["input.3"];
-      input_map["2"];
+      
       int accu_count = 0, total_count = 0;
       while (1){
-	std::getline(glue_stream,line);
+	std::unordered_map<std::string, std::vector<int64_t>> input_map;
+	input_map[glue_arg1];
+	input_map[glue_arg2];
+	input_map[glue_arg3];
+	std::unordered_map<std::string, std::vector<int64_t>> sent_tokens;
+	sent_tokens["vec_feature"];
+	sent_tokens["vec_id"];
+	sent_tokens["seg_id"];
+	std::vector<int> vec_labels;
+	
+	for (std::size_t batch_no = 0; batch_no < glue_batch_size; batch_no++){
+	  std::getline(glue_stream,line);
+	  if (line.empty()) break;
+	  int label = parse_line(line,128,sent_tokens);
+	  vec_labels.push_back(label);
+	  input_map[glue_arg1].insert(input_map[glue_arg1].end(),sent_tokens["vec_feature"].begin(),sent_tokens["vec_feature"].end());
+	  input_map[glue_arg2].insert(input_map[glue_arg2].end(),sent_tokens["vec_id"].begin(),sent_tokens["vec_id"].end());
+	  input_map[glue_arg3].insert(input_map[glue_arg3].end(),sent_tokens["seg_id"].begin(),sent_tokens["seg_id"].end());      
+	}
 	if (line.empty()) break;
-	int label = parse_line(line,128, input_map);
+
 	// copy the arguments
 	for (auto &&x : prog.get_parameter_shapes()){
 	  migraphx::argument arg{};
@@ -655,7 +704,7 @@ int main(int argc,char *const argv[],char *const envp[]){
 	  }
 	}
 	// evaluate result
-	migraphx::argument result;
+	migraphx::argument result{};
 	if (is_gpu){
 	  result = migraphx::gpu::from_gpu(prog.eval(pmap));
 	} else {
@@ -663,11 +712,14 @@ int main(int argc,char *const argv[],char *const envp[]){
 	}
 	std::vector<float> vec_output;
 	result.visit([&](auto output){ vec_output.assign(output.begin(),output.end()); });
-	if (is_verbose)
-	  std::cout << "[" << vec_output[0] << "," << vec_output[1] << "]" << std::endl;
-	int calc_label = (vec_output[0] >= vec_output[1]) ? 0 : 1;
-	accu_count += (calc_label == label) ? 1 : 0;
-	total_count++;
+
+	for (std::size_t batch_no = 0; batch_no < glue_batch_size; batch_no++){
+	  if (is_verbose)
+	    std::cout << "[" << vec_output[2*batch_no] << "," << vec_output[2 * batch_no + 1] << "]" << std::endl;
+	  int calc_label = (vec_output[2*batch_no] >= vec_output[2*batch_no + 1]) ? 0 : 1;
+	  accu_count += (calc_label == vec_labels[batch_no]) ? 1 : 0;
+	  total_count++;
+	}
       }
       std::cout << "accuracy rate = " << 1.0 * accu_count / total_count << std::endl;
     }

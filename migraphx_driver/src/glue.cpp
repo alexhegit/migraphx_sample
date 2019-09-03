@@ -23,9 +23,9 @@ void parse_sentence(const std::string& sent, std::vector<int64_t>& vec_feature)
 int parse_line(std::string& line, std::size_t sent_size, 
         std::unordered_map<std::string, std::vector<int64_t>>& input_map)
 {
-    auto& vec_feature = input_map["input.1"];
-    auto& vec_id = input_map["input.3"];
-    auto& seg_id = input_map["2"];
+    auto& vec_feature = input_map["vec_feature"];
+    auto& vec_id = input_map["vec_id"];
+    auto& seg_id = input_map["seg_id"];
     vec_feature.clear();
     vec_id.clear();
     seg_id.clear();
