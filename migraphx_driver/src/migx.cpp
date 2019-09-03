@@ -457,8 +457,8 @@ int main(int argc,char *const argv[],char *const envp[]){
       glue_arg3 = "2";
     } else if (model_type == model_tfpb){
       glue_arg1 = "input_ids_1";
-      glue_arg2 = "input_mask_1";
-      glue_arg3 = "segment_ids_1";      
+      glue_arg3 = "input_mask_1";
+      glue_arg2 = "segment_ids_1";      
     }
     
     auto param_shapes = prog.get_parameter_shapes();
@@ -669,9 +669,13 @@ int main(int argc,char *const argv[],char *const envp[]){
       int accu_count = 0, total_count = 0;
       while (1){
 	std::unordered_map<std::string, std::vector<int64_t>> input_map;
+	std::unordered_map<std::string, std::vector<int32_t>> input_map32;
 	input_map[glue_arg1];
 	input_map[glue_arg2];
 	input_map[glue_arg3];
+	input_map32[glue_arg1];
+	input_map32[glue_arg2];
+	input_map32[glue_arg3];	
 	std::unordered_map<std::string, std::vector<int64_t>> sent_tokens;
 	sent_tokens["vec_feature"];
 	sent_tokens["vec_id"];
@@ -685,7 +689,10 @@ int main(int argc,char *const argv[],char *const envp[]){
 	  vec_labels.push_back(label);
 	  input_map[glue_arg1].insert(input_map[glue_arg1].end(),sent_tokens["vec_feature"].begin(),sent_tokens["vec_feature"].end());
 	  input_map[glue_arg2].insert(input_map[glue_arg2].end(),sent_tokens["vec_id"].begin(),sent_tokens["vec_id"].end());
-	  input_map[glue_arg3].insert(input_map[glue_arg3].end(),sent_tokens["seg_id"].begin(),sent_tokens["seg_id"].end());      
+	  input_map[glue_arg3].insert(input_map[glue_arg3].end(),sent_tokens["seg_id"].begin(),sent_tokens["seg_id"].end());
+	  input_map32[glue_arg1].insert(input_map32[glue_arg1].end(),sent_tokens["vec_feature"].begin(),sent_tokens["vec_feature"].end());
+	  input_map32[glue_arg2].insert(input_map32[glue_arg2].end(),sent_tokens["vec_id"].begin(),sent_tokens["vec_id"].end());
+	  input_map32[glue_arg3].insert(input_map32[glue_arg3].end(),sent_tokens["seg_id"].begin(),sent_tokens["seg_id"].end());      	  
 	}
 	if (line.empty()) break;
 
@@ -693,7 +700,10 @@ int main(int argc,char *const argv[],char *const envp[]){
 	for (auto &&x : prog.get_parameter_shapes()){
 	  migraphx::argument arg{};
 	  if (input_map.count(x.first) > 0){
-	    arg = migraphx::argument(x.second,input_map[x.first].data());
+	    if (model_type == model_onnx)
+	      arg = migraphx::argument(x.second,input_map[x.first].data());
+	    else if (model_type == model_tfpb)
+	      arg = migraphx::argument(x.second,input_map32[x.first].data());	      
 	  } else {
 	    arg = migraphx::generate_argument(x.second,get_hash(x.first));
 	  }
