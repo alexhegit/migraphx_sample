@@ -79,7 +79,7 @@ enum model_type { model_unknown, model_onnx, model_tfpb } model_type = model_unk
 std::string model_filename;
 bool is_nhwc = true;
 bool set_nhwc = false;
-enum quantize_type { quantize_none, quantize_fp16, quantize_int8 } quantize_type = quantize_none;
+enum quantization_type { quantization_none, quantization_fp16, quantization_int8 } quantization_type = quantization_none;
 enum run_type { run_none, run_benchmark, run_perfreport, run_imageinfo, run_imagenet, run_glue, run_mnist, run_printmodel, run_eval, run_eval_print } run_type = run_none;
 enum glue_type glue_type = glue_none;
 std::string glue_file;
@@ -175,10 +175,10 @@ int parse_options(int argc,char *const argv[]){
       is_nhwc = false;
       break;
     case 12:
-      quantize_type = quantize_fp16;
+      quantization_type = quantization_fp16;
       break;
     case 13:
-      quantize_type = quantize_int8;
+      quantization_type = quantization_int8;
       break;
     case 14:
       fileinput_type = fileinput_image;
@@ -339,10 +339,26 @@ int main(int argc,char *const argv[],char *const envp[]){
   }
 
   // quantize the program
-  if (quantize_type == quantize_fp16){
-    quantize(prog);
+  if (quantization_type == quantization_fp16){
+    quantize_fp16(prog);
+  } else if (quantization_type == quantization_int8){
+#if 0    
+    // use one piece of randomly generated argument...
+    migraphx::program::parameter_map calibration_map;
+    for (auto&& x : prog.get_parameter_shapes()){
+      calibration_map[x.first] = migraphx::generate_argument(x.second);
+    }
+    std::vector<migraphx::program::parameter_map> calibration = { calibration_map };
+#else
+    // use empty calibration data
+    std::vector<migraphx::program::parameter_map> calibration;
+#endif
+    if (is_gpu)
+      quantize_int8(prog,migraphx::gpu::target{},calibration);      
+    else
+      quantize_int8(prog,migraphx::cpu::target{},calibration);      
   } else
-    if (quantize_type != quantize_none){
+    if (quantization_type != quantization_none){
     std::cerr << "quantization not yet implemented" << std::endl;
   }
 
