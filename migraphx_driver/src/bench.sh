@@ -1,13 +1,50 @@
 #!/bin/bash
 MIGX=${MIGX:="/home/mev/source/migraphx_sample/migraphx_driver/build/migx"}
 ONNXDIR=${ONNXDIR:="/home/mev/source/migraphx_onnx"}
+TFPBDIR=${TFPBDIR:="/home/mev/source/migraphx_sample/tfpb"}
 OUTFILE=outfile
 
 rocminfo=`/opt/rocm/bin/rocminfo | grep gfx | head -1 | awk '{ print $2 }'`
-echo "Date",`date '+%F'`
-echo "Arch",$rocminfo
+date=`date '+%F'`
 echo
-echo "Status,Model,Frozen,Batch,Quant,IPS"
+echo "Date,Status,Arch,Model,Frozen,Batch,Quant,IPS"
+
+while read model quant batch tfpb extra
+do
+    if [ "${quant}" == "fp16" ]; then
+	quant_option="--fp16"
+    elif [ "${quant}" == "int8" ]; then
+	quant_option="--int8"
+    fi
+
+    echo "DEBUG " ${MIGX} --tfpb ${TFPBDIR}/${tfpb} ${quant_option} --argname input ${extra} --perf_report
+    ${MIGX} --tfpb ${TFPBDIR}/${tfpb} ${quant_option} --argname input ${extra} --perf_report > ${OUTFILE} 2>&1
+    if grep "Rate: " ${OUTFILE} > lastresult; then
+	rate=`awk -F'[ /]' '{ print $2 }' lastresult`
+	echo "DEBUG Rate = " $rate
+	imagepersec=`echo $rate \* $batch | bc`
+	echo "DEBUG IPS  = " $imagepersec
+	echo $date,PASS,$rocminfo,$model,"TF",$batch,$quant,$imagepersec 
+    else
+	imagepersec="0"
+	echo $date,FAIL,$rocminfo,$model,"TF",$batch,$quant,$imagepersec 
+    fi
+done <<BENCHCONFIG
+bert/bert_mrpc1 fp32 1 bert_mrpc1.pb --glue=MRPC --gluefile=/home/mev/source/migraphx_sample/migraphx_driver/glue/MRPC.tst
+mobilenet_v2    fp32 1 mobilenet_v2i1.pb
+resnet50_v1     fp32 1 resnet_v1_50i1.pb
+resnet50_v2     fp32 1 resnet_v2_50i1.pb
+bert/bert_mrpc1 fp16 1 bert_mrpc1.pb --glue=MRPC --gluefile=/home/mev/source/migraphx_sample/migraphx_driver/glue/MRPC.tst
+mobilenet_v2    fp16 1 mobilenet_v2i1.pb
+resnet50_v1     fp16 1 resnet_v1_50i1.pb
+resnet50_v2     fp16 1 resnet_v2_50i1.pb
+mobilenet_v2    fp32 64 mobilenet_v2i64.pb
+resnet50_v1     fp32 64 resnet_v1_50i64.pb
+resnet50_v2     fp32 64 resnet_v2_50i64.pb
+mobilenet_v2    fp16 64 mobilenet_v2i64.pb
+resnet50_v1     fp16 64 resnet_v1_50i64.pb
+resnet50_v2     fp16 64 resnet_v2_50i64.pb
+BENCHCONFIG
 
 while read model quant batch onnx extra
 do
