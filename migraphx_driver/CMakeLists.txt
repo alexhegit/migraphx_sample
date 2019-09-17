@@ -21,6 +21,7 @@ link_directories(${MIGRAPHX_BUILD}/src/onnx
                  ${MIGRAPHX_BUILD}/src
                  ${MIGRAPHX_BUILD}/src/targets/gpu
                  ${MIGRAPHX_BUILD}/src/targets/cpu
+		 ${MIGRAPHX_BUILD}/lib
 		 ${MIOPEN_LIBS}
 		 ${HIP_LIBS})
 
