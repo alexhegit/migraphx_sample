@@ -1,1 +1,1 @@
-export PYTHONPATH=/home/mev/source/AMDMIGraphX/build/src/py
+export PYTHONPATH=/home/mev/source/AMDMIGraphX/build/lib:/home/mev/source/AMDMIGraphX/build/src/py
