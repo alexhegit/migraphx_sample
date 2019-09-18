@@ -98,7 +98,7 @@ resnext101_64x4d fp32 16 cadene/resnext101_64x4di1.onnx
 inceptionv3      fp32 32 torchvision/inceptioni1.onnx
 inceptionv4      fp32 16 cadene/inceptionv4i1.onnx
 vgg16            fp32 16 torchvision/vgg16i1.onnx
-bert/bert_mrpc8  fp32 8 bert/bert_mrpc1.onnx  --glue=MRPC --gluefile=/home/mev/source/migraphx_sample/migraphx_driver/glue/MRPC.tst
+bert/bert_mrpc8  fp32 8 bert/bert_mrpc8.onnx  --glue=MRPC --gluefile=/home/mev/source/migraphx_sample/migraphx_driver/glue/MRPC.tst
 resnet50         fp16 64 torchvision/resnet50i1.onnx
 alexnet          fp16 64 torchvision/alexneti1.onnx
 densenet121      fp16 32 torchvision/densenet121i1.onnx
@@ -108,5 +108,5 @@ resnext101_64x4d fp16 16 cadene/resnext101_64x4di1.onnx
 inceptionv3      fp16 32 torchvision/inceptioni1.onnx
 inceptionv4      fp16 16 cadene/inceptionv4i1.onnx
 vgg16            fp16 16 torchvision/vgg16i1.onnx
-bert/bert_mrpc8  fp16 1 bert/bert_mrpc1.onnx  --glue=MRPC --gluefile=/home/mev/source/migraphx_sample/migraphx_driver/glue/MRPC.tst
+bert/bert_mrpc8  fp16 8 bert/bert_mrpc8.onnx  --glue=MRPC --gluefile=/home/mev/source/migraphx_sample/migraphx_driver/glue/MRPC.tst
 BENCHCONFIG
