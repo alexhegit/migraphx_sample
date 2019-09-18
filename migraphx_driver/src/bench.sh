@@ -61,10 +61,10 @@ do
 	echo "DEBUG Rate = " $rate
 	imagepersec=`echo $rate \* $batch | bc`
 	echo "DEBUG IPS  = " $imagepersec
-	echo PASS,$model,"ONNX",$batch,$quant,$imagepersec 
+	echo $date,PASS,$rocminfo,$model,"ONNX",$batch,$quant,$imagepersec 
     else
 	imagepersec="0"
-	echo FAIL,$model,"ONNX",$batch,$quant,$imagepersec 
+	echo $date,FAIL,$rocminfo,$model,"ONNX",$batch,$quant,$imagepersec 
     fi
 done <<BENCHCONFIG
 resnet50         fp32 1 torchvision/resnet50i1.onnx
