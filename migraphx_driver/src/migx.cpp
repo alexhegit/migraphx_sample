@@ -58,6 +58,7 @@ std::string usage_message =
   "        --imagefile=<filename>\n"
   "        --gluefile=<filename> pointer to the glue tab-separated token file, e.g. MRPC.tst\n" +
   "        --random_input       create random input for argument\n"
+  "        --zero_input         create zero input for argument\n"
   "        --debugfile=<filename> ASCII file of floating numbers\n" +
   "    running\n" +
   "        --perf_report        run migraphx perf report including times per instruction\n" +
@@ -102,6 +103,7 @@ std::string trace_eval_var = "MIGRAPHX_TRACE_EVAL=1";
 bool trace_compile = false;
 std::string trace_compile_var = "MIGRAPHX_TRACE_COMPILE=1";
 bool has_random_input = false;
+bool has_zero_input = false;
 
 /* parse_options
  *
@@ -125,19 +127,20 @@ int parse_options(int argc,char *const argv[]){
     { "imagefile", required_argument, 0, 14 },
     { "gluefile", required_argument, 0, 15 },
     { "random_input", no_argument,  0, 16 },
-    { "debugfile", required_argument, 0, 17 },
-    { "benchmark", no_argument,     0, 18 },
-    { "perf_report", no_argument,   0, 19 },
-    { "imageinfo", no_argument,     0, 20 },
-    { "imagenet", required_argument, 0, 21 },
-    { "glue", required_argument, 0, 22 },
-    { "mnist", required_argument, 0, 23 },
-    { "print_model", no_argument,   0, 24 },
-    { "eval", no_argument, 0, 25 },
-    { "trim", required_argument, 0, 26 },
-    { "iterations", required_argument, 0, 27 },
-    { "copyarg", no_argument,       0, 28 },
-    { "argname", required_argument, 0, 29 },
+    { "zero_input", no_argument,    0, 17 },
+    { "debugfile", required_argument, 0, 18 },
+    { "benchmark", no_argument,     0, 19 },
+    { "perf_report", no_argument,   0, 20 },
+    { "imageinfo", no_argument,     0, 21 },
+    { "imagenet", required_argument, 0, 22 },
+    { "glue", required_argument, 0, 23 },
+    { "mnist", required_argument, 0, 24 },
+    { "print_model", no_argument,   0, 25 },
+    { "eval", no_argument, 0, 26 },
+    { "trim", required_argument, 0, 27 },
+    { "iterations", required_argument, 0, 28 },
+    { "copyarg", no_argument,       0, 29 },
+    { "argname", required_argument, 0, 30 },
     { 0,         0,                 0, 0  },
   };
   while ((opt = getopt_long(argc,argv,"",long_options,NULL)) != -1){
@@ -191,23 +194,26 @@ int parse_options(int argc,char *const argv[]){
       has_random_input = true;
       break;
     case 17:
+      has_zero_input = true;
+      break;
+    case 18:
       fileinput_type = fileinput_debug;      
       debug_filename = optarg;
       break;
-    case 18:
+    case 19:
       run_type = run_benchmark;
       break;
-    case 19:
+    case 20:
       run_type = run_perfreport;
       break;
-    case 20:
+    case 21:
       run_type = run_imageinfo;
       break;
-    case 21:
+    case 22:
       imagenet_dir = optarg;
       run_type = run_imagenet;
       break;
-    case 22:
+    case 23:
       run_type = run_glue;
       if (optarg == std::string("CoLA"))
 	glue_type = glue_cola;
@@ -234,40 +240,40 @@ int parse_options(int argc,char *const argv[]){
 	return 1;
       }
       break;
-    case 23:
+    case 24:
       mnist_dir = optarg;
       run_type = run_mnist;
       break;
-    case 24:
+    case 25:
       if (run_type == run_eval)
 	run_type = run_eval_print;
       else
 	run_type = run_printmodel;
       break;
-    case 25:
+    case 26:
       if (run_type == run_printmodel)
 	run_type = run_eval_print;
       else
 	run_type = run_eval;
       break;
-    case 26:
+    case 27:
       if (std::stoi(optarg) < 0){
 	std::cerr << migx_program << ": trim < 0, ignored" << std::endl;	
       } else {
 	trim_instructions = std::stoi(optarg);
       }
       break;
-    case 27:
+    case 28:
       if (std::stoi(optarg) < 0){
 	std::cerr << migx_program << ": iterations < 0, ignored" << std::endl;
       } else {
 	iterations = std::stoi(optarg);
       }
       break;
-    case 28:
+    case 29:
       copyarg = true;
       break;
-    case 29:
+    case 30:
       argname = optarg;
       break;
     default:
@@ -289,6 +295,9 @@ int parse_options(int argc,char *const argv[]){
   if ((glue_type != glue_none) && (glue_file.empty())){
     std::cerr << migx_program << ": --glue= requires --gluefile option" << std::endl;
     return 1;
+  }
+  if (has_random_input && has_zero_input){
+    std::cerr << migx_program << ": --zero_input and --random_input are mutually exclusive" << std::endl;
   }
   return 0;
 }
@@ -403,6 +412,8 @@ int main(int argc,char *const argv[],char *const envp[]){
     }
     if (is_gpu && has_random_input)
       pmap[x.first] = migraphx::gpu::to_gpu(migraphx::generate_argument(x.second));
+    else if (is_gpu && has_zero_input)
+      pmap[x.first] = migraphx::gpu::to_gpu(migraphx::fill_argument(x.second));      
     else if (is_gpu)
       pmap[x.first] = migraphx::gpu::allocate_gpu(x.second);
     else
