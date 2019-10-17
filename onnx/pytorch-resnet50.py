@@ -12,7 +12,7 @@ def resnet18():
     for batch in 1,2,4,8,16,32,64,128:
         filename='resnet18i'+str(batch)+'.onnx'
         print(filename)
-        torch.onnx.export(resnet18,torch.randn(batch,3,224,224),filename)
+        torch.onnx.export(resnet18,torch.randn(batch,3,224,224),filename,keep_initializers_as_inputs=True)
 
 def resnet34():
     resnet34 = models.resnet34(pretrained=True)
@@ -20,7 +20,7 @@ def resnet34():
     for batch in 1,2,4,8,16,32,64:
         filename='resnet34i'+str(batch)+'.onnx'
         print(filename)
-        torch.onnx.export(resnet34,torch.randn(batch,3,224,224),filename)        
+        torch.onnx.export(resnet34,torch.randn(batch,3,224,224),filename,keep_initializers_as_inputs=True) 
 
 def resnet50():
     resnet50 = models.resnet50(pretrained=True)
@@ -28,7 +28,7 @@ def resnet50():
     for batch in 1,2,4,8,16,32,64:
         filename='resnet50i'+str(batch)+'.onnx'
         print(filename)
-        torch.onnx.export(resnet50,torch.randn(batch,3,224,224),filename)
+        torch.onnx.export(resnet50,torch.randn(batch,3,224,224),filename,keep_initializers_as_inputs=True)
 
 def resnet101():
     resnet101 = models.resnet101(pretrained=True)
@@ -36,7 +36,7 @@ def resnet101():
     for batch in 1,2,4,8,16,32:
         filename='resnet101i'+str(batch)+'.onnx'
         print(filename)
-        torch.onnx.export(resnet101,torch.randn(batch,3,224,224),filename)
+        torch.onnx.export(resnet101,torch.randn(batch,3,224,224),filename,keep_initializers_as_inputs=True)
 
 def resnet152():
     resnet152 = models.resnet152(pretrained=True)
@@ -44,7 +44,7 @@ def resnet152():
     for batch in 1,2,4,8,16,32:
         filename='resnet152i'+str(batch)+'.onnx'
         print(filename)
-        torch.onnx.export(resnet152,torch.randn(batch,3,224,224),filename)
+        torch.onnx.export(resnet152,torch.randn(batch,3,224,224),filename,keep_initializers_as_inputs=True)
 
 def resnet():
 #    resnet18()
@@ -59,7 +59,7 @@ def inception():
     for batch in 1,2,4,8,16,32:
         filename='inceptioni'+str(batch)+'.onnx'
         print(filename)
-        torch.onnx.export(inception,torch.randn(batch,3,299,299),filename)
+        torch.onnx.export(inception,torch.randn(batch,3,299,299),filename,keep_initializers_as_inputs=True)
 
 def squeezenet10():
     squeezenet = models.squeezenet1_0()
@@ -67,7 +67,7 @@ def squeezenet10():
     for batch in 1,2,4,8,16,32,64,128,256:
         filename='squeezenet10i'+str(batch)+'.onnx'
         print(filename)
-        torch.onnx.export(squeezenet,torch.randn(batch,3,224,224),filename)
+        torch.onnx.export(squeezenet,torch.randn(batch,3,224,224),filename,keep_initializers_as_inputs=True)
 
 def squeezenet11():
     squeezenet = models.squeezenet1_1()
@@ -75,7 +75,7 @@ def squeezenet11():
     for batch in 1,2,4,8,16,32,64,128,256:
         filename='squeezenet11i'+str(batch)+'.onnx'
         print(filename)
-        torch.onnx.export(squeezenet,torch.randn(batch,3,224,224),filename)        
+        torch.onnx.export(squeezenet,torch.randn(batch,3,224,224),filename,keep_initializers_as_inputs=True)        
 
 def squeezenet():
     squeezenet10()
@@ -87,7 +87,7 @@ def alexnet():
     for batch in 1,2,4,8,16,32,64,128,256:
         filename='alexneti'+str(batch)+'.onnx'
         print(filename)
-        torch.onnx.export(alexnet,torch.randn(batch,3,224,224),filename)
+        torch.onnx.export(alexnet,torch.randn(batch,3,224,224),filename,keep_initializers_as_inputs=True)
 
 def densenet121():
     densenet = models.densenet121(pretrained=True)
@@ -95,7 +95,7 @@ def densenet121():
     for batch in 1,2,4,8,16,32:
         filename='densenet121i'+str(batch)+'.onnx'
         print(filename)
-        torch.onnx.export(densenet,torch.randn(batch,3,224,224),filename)    
+        torch.onnx.export(densenet,torch.randn(batch,3,224,224),filename,keep_initializers_as_inputs=True)    
 
 def densenet169():
     densenet = models.densenet169(pretrained=True)
@@ -103,7 +103,7 @@ def densenet169():
     for batch in 1,2,4,8,16,32:
         filename='densenet169i'+str(batch)+'.onnx'
         print(filename)
-        torch.onnx.export(densenet,torch.randn(batch,3,224,224),filename)
+        torch.onnx.export(densenet,torch.randn(batch,3,224,224),filename,keep_initializers_as_inputs=True)
 
 def densenet161():
     densenet = models.densenet161(pretrained=True)
@@ -111,7 +111,7 @@ def densenet161():
     for batch in 1,2,4,8,16:
         filename='densenet161i'+str(batch)+'.onnx'
         print(filename)
-        torch.onnx.export(densenet,torch.randn(batch,3,224,224),filename)
+        torch.onnx.export(densenet,torch.randn(batch,3,224,224),filename,keep_initializers_as_inputs=True)
 
 def densenet201():
     densenet = models.densenet201(pretrained=True)
@@ -119,7 +119,7 @@ def densenet201():
     for batch in 1,2,4,8,16:
         filename='densenet201i'+str(batch)+'.onnx'
         print(filename)
-        torch.onnx.export(densenet,torch.randn(batch,3,224,224),filename)        
+        torch.onnx.export(densenet,torch.randn(batch,3,224,224),filename,keep_initializers_as_inputs=True)        
         
 def densenet():
     densenet121()
@@ -133,7 +133,7 @@ def vgg11():
     for batch in 1,2,4,8,16,32,64:
         filename='vgg11i'+str(batch)+'.onnx'
         print(filename)
-        torch.onnx.export(vgg,torch.randn(batch,3,224,224),filename)
+        torch.onnx.export(vgg,torch.randn(batch,3,224,224),filename,keep_initializers_as_inputs=True)
 
 def vgg13():
     vgg = models.vgg13(pretrained=True)
@@ -141,7 +141,7 @@ def vgg13():
     for batch in 1,2,4,8,16,32:
         filename='vgg13i'+str(batch)+'.onnx'
         print(filename)
-        torch.onnx.export(vgg,torch.randn(batch,3,224,224),filename)
+        torch.onnx.export(vgg,torch.randn(batch,3,224,224),filename,keep_initializers_as_inputs=True)
 
 def vgg16():
     vgg = models.vgg16(pretrained=True)
@@ -149,7 +149,7 @@ def vgg16():
     for batch in 1,2,4,8,16,32:
         filename='vgg16i'+str(batch)+'.onnx'
         print(filename)
-        torch.onnx.export(vgg,torch.randn(batch,3,224,224),filename)
+        torch.onnx.export(vgg,torch.randn(batch,3,224,224),filename,keep_initializers_as_inputs=True)
 
 def vgg19():
     vgg = models.vgg19(pretrained=True)
@@ -157,7 +157,7 @@ def vgg19():
     for batch in 1,2,4,8,16:
         filename='vgg19i'+str(batch)+'.onnx'
         print(filename)
-        torch.onnx.export(vgg,torch.randn(batch,3,224,224),filename)
+        torch.onnx.export(vgg,torch.randn(batch,3,224,224),filename,keep_initializers_as_inputs=True)
 
 def vgg():
     vgg11()

@@ -24,4 +24,4 @@ output_all_encoded_layers=True
 
 model=BertForSequenceClassification.from_pretrained('bert-base-uncased',num_labels=2)
 
-torch.onnx.export(model,(input_ids,token_type_ids),'bertmodel_classifier.onnx')
+torch.onnx.export(model,(input_ids,token_type_ids),'bertmodel_classifier.onnx',keep_initializers_as_inputs=True)
