@@ -351,7 +351,7 @@ int main(int argc,char *const argv[],char *const envp[]){
   if (quantization_type == quantization_fp16){
     quantize_fp16(prog);
   } else if (quantization_type == quantization_int8){
-#if 0    
+#if RANDOM_CALIBRATION
     // use one piece of randomly generated argument...
     migraphx::program::parameter_map calibration_map;
     for (auto&& x : prog.get_parameter_shapes()){
