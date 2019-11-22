@@ -75,8 +75,8 @@ fbresnet152      fp32 1 cadene/fbresnet152i1.onnx
 resnext101_64x4d fp32 1 cadene/resnext101_64x4di1.onnx
 inceptionv3      fp32 1 torchvision/inceptioni1.onnx
 vgg16            fp32 1 torchvision/vgg16i1.onnx
-wlang/gru        fp32 1 wlang/wlang_gru.onnx --argname=input.1
-wlang/lstm       fp32 1 wlang/wlang_lstm.onnx --argname=input.1
+wlang/gru        fp32 1 wlang/wlang_gru.onnx --zero_input --argname=input.1
+wlang/lstm       fp32 1 wlang/wlang_lstm.onnx --zero_input --argname=input.1
 bert/bert_mrpc1  fp32 1 bert/bert_mrpc1.onnx --glue=MRPC --gluefile=/home/mev/source/migraphx_sample/migraphx_driver/glue/MRPC.tst
 resnet50         fp16 1 torchvision/resnet50i1.onnx
 alexnet          fp16 1 torchvision/alexneti1.onnx
@@ -86,8 +86,8 @@ fbresnet152      fp16 1 cadene/fbresnet152i1.onnx
 resnext101_64x4d fp16 1 cadene/resnext101_64x4di1.onnx
 inceptionv3      fp16 1 torchvision/inceptioni1.onnx
 vgg16            fp16 1 torchvision/vgg16i1.onnx
-wlang/gru        fp16 1 wlang/wlang_gru.onnx  --argname=input.1
-wlang/lstm       fp16 1 wlang/wlang_lstm.onnx  --argname=input.1
+wlang/gru        fp16 1 wlang/wlang_gru.onnx  --zero_input --argname=input.1
+wlang/lstm       fp16 1 wlang/wlang_lstm.onnx  --zero_input --argname=input.1
 bert/bert_mrpc1  fp16 1 bert/bert_mrpc1.onnx  --glue=MRPC --gluefile=/home/mev/source/migraphx_sample/migraphx_driver/glue/MRPC.tst
 resnet50         fp32 64 torchvision/resnet50i64.onnx
 alexnet          fp32 64 torchvision/alexneti64.onnx

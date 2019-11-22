@@ -351,13 +351,16 @@ int main(int argc,char *const argv[],char *const envp[]){
   if (quantization_type == quantization_fp16){
     quantize_fp16(prog);
   } else if (quantization_type == quantization_int8){
-#if 0    
-    // use one piece of randomly generated argument...
-    migraphx::program::parameter_map calibration_map;
-    for (auto&& x : prog.get_parameter_shapes()){
-      calibration_map[x.first] = migraphx::generate_argument(x.second);
+#if 0
+    std::vector<migraphx::program::parameter_map> calibration;
+    migraphx::program::parameter_map *calibration_map = new migraphx::program::parameter_map;
+    // use 100 pieces of randomly generated argument...
+    for (int i = 0;i<100;i++){
+      for (auto&& x : prog.get_parameter_shapes()){
+	(*calibration_map)[x.first] = migraphx::generate_argument(x.second);
+	calibration.push_back(*calibration_map);
+      }
     }
-    std::vector<migraphx::program::parameter_map> calibration = { calibration_map };
 #else
     // use empty calibration data
     std::vector<migraphx::program::parameter_map> calibration;
