@@ -117,7 +117,7 @@ def main():
 
     if (args.save_model):
         torch.save(model.state_dict(),"mnist_cnn.pt")
-    torch.onnx.export(model,torch.randn(1,1,28,28),'pytorch-mnist.onnx')
+    torch.onnx.export(model,torch.randn(1,1,28,28),'pytorch-mnist.onnx',keep_initializers_as_inputs=True)
         
 if __name__ == '__main__':
     main()

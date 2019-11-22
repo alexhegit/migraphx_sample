@@ -32,7 +32,7 @@ model = BertModel.from_pretrained('bert-base-uncased')
 model.eval()
 
 # dump an onnx file - use the actual inputs since not quite sure how to get integer outputs...
-torch.onnx.export(model,(tokens_tensor,segments_tensors),'bertmodel.onnx')
+torch.onnx.export(model,(tokens_tensor,segments_tensors),'bertmodel.onnx',keep_initializers_as_inputs=True)
 
 # Predict hidden states features from each layer
 encoded_layers,_ = model(tokens_tensor,segments_tensors)
@@ -44,7 +44,7 @@ model = BertForMaskedLM.from_pretrained('bert-base-uncased')
 model.eval()
 
 # dump an onnx file - use the actual inputs since not quite sure how to get integer outputs...
-torch.onnx.export(model,(tokens_tensor,segments_tensors),'bertmodel_lm.onnx')
+torch.onnx.export(model,(tokens_tensor,segments_tensors),'bertmodel_lm.onnx',keep_initializers_as_inputs=True)
 
 # Predict all tokens
 predictions = model(tokens_tensor, segments_tensors)
