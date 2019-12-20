@@ -338,7 +338,10 @@ int main(int argc,char *const argv[],char *const envp[]){
     }
   } else if (model_type == model_tfpb){
     try {
-      prog = parse_tf(model_filename,is_nhwc);
+      struct tf_options tf_opt;
+      tf_opt.is_nhwc = is_nhwc;
+      tf_opt.batch_size = 1;
+      prog = parse_tf(model_filename,tf_opt);
     } catch( std::exception &exc){
       std::cerr << exc.what();
     } catch(...){
@@ -349,7 +352,10 @@ int main(int argc,char *const argv[],char *const envp[]){
 
   // quantize the program
   if (quantization_type == quantization_fp16){
-    quantize_fp16(prog);
+#if HACK
+    quantize_fp16(prog)
+#endif
+      ;
   } else if (quantization_type == quantization_int8){
 #if RANDOM_CALIBRATION
     // use one piece of randomly generated argument...
@@ -362,10 +368,13 @@ int main(int argc,char *const argv[],char *const envp[]){
     // use empty calibration data
     std::vector<migraphx::program::parameter_map> calibration;
 #endif
+
+#if HACK
     if (is_gpu)
       quantize_int8(prog,migraphx::gpu::target{},calibration);      
     else
-      quantize_int8(prog,migraphx::cpu::target{},calibration);      
+      quantize_int8(prog,migraphx::cpu::target{},calibration);
+#endif
   } else
     if (quantization_type != quantization_none){
     std::cerr << "quantization not yet implemented" << std::endl;
@@ -405,15 +414,20 @@ int main(int argc,char *const argv[],char *const envp[]){
 	std::cout << x.second.lens()[i];
       }
       std::cout << "]" << std::endl;
+      argument& arg = pmap[x.first];
+      if (arg.empty()) std::cout << "empty" << std::endl;
+      else std::cout << "not empty" << std::endl;
     }
     if (x.first == argname){
       argshape = x.second;
       argname_found = true;
     }
-    if (is_gpu && has_random_input)
+    if (is_gpu && has_random_input){
       pmap[x.first] = migraphx::gpu::to_gpu(migraphx::generate_argument(x.second));
+      auto arg = migraphx::generate_argument(x.second);
+    }
     else if (is_gpu && has_zero_input)
-      pmap[x.first] = migraphx::gpu::to_gpu(migraphx::fill_argument(x.second));      
+      pmap[x.first] = migraphx::gpu::to_gpu(migraphx::fill_argument(x.second));
     else if (is_gpu)
       pmap[x.first] = migraphx::gpu::allocate_gpu(x.second);
     else
