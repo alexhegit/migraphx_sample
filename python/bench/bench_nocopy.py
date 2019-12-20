@@ -99,7 +99,7 @@ if framework == 'tensorflow':
 elif framework == 'migraphx':
     import migraphx
     graph = migraphx.parse_tf(save_file)
-    graph.compile(migraphx.get_target("gpu"))
+    graph.compile(migraphx.get_target("gpu"),offload_copy=False)
     # allocate space with random params
     params = {}
     for key,value in graph.get_parameter_shapes().items():

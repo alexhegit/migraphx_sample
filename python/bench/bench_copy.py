@@ -102,17 +102,17 @@ elif framework == 'migraphx':
     graph.compile(migraphx.get_target("gpu"))
     # allocate space with random params
     params = {}
-    for key,value in graph.get_parameter_shapes().items():
-        params[key] = migraphx.allocate_gpu(value)
+    #for key,value in graph.get_parameter_shapes().items():
+    #    params[key] = migraphx.allocate_gpu(value)
 
     image = load_image(image_file,batch)
     for i in range(repeat):    
-        params['input'] = migraphx.to_gpu(migraphx.argument(image))
-        result = np.array(migraphx.from_gpu(graph.run(params)),copy=False)
+        params['input'] = migraphx.argument(image)
+        result = np.array(graph.run(params),copy=False)
     start_time = time.time()
     for i in range(repeat):    
-        params['input'] = migraphx.to_gpu(migraphx.argument(image))
-        result = np.array(migraphx.from_gpu(graph.run(params)),copy=False)
+        params['input'] = migraphx.argument(image)
+        result = np.array(graph.run(params),copy=False)
     finish_time = time.time()
     idx = np.argmax(result[0])
     print('MIGraphX: ')    
