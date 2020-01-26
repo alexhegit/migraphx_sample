@@ -1,0 +1,17 @@
+FROM rocm/dev-ubuntu-18.04:3.0
+RUN sed -e 's/debian/3.0/g' /etc/apt/sources.list.d/rocm.list > /etc/apt/sources.list.d/rocm3.0.list
+RUN rm /etc/apt/sources.list.d/rocm.list
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt update && apt install -y git cmake python-pip python3-pip zlib1g-dev unzip autogen autoconf libtool wget
+RUN apt update && apt install -y libnuma-dev rocm-cmake rocm-libs miopen-hip
+RUN apt update && apt install -y libopencv-dev
+RUN pip install https://github.com/RadeonOpenCompute/rbuild/archive/master.tar.gz
+RUN pip install cget
+RUN mkdir /src
+RUN cd /src && git clone https://github.com/ROCmSoftwarePlatform/AMDMIGraphX
+RUN cd /src && git clone https://github.com/mvermeulen/migraphx_sample 
+ENV LD_LIBRARY_PATH=/usr/local/lib:
+COPY copyfiles/build.sh /src
+COPY copyfiles/include/half.hpp /usr/local/include/
+RUN pip3 install torch torchvision
+RUN pip3 install tensorflow
