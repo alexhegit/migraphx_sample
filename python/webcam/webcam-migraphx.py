@@ -42,9 +42,8 @@ while (True):
         # display the frame
         cv2.imshow('frame',cropped)
 
-        params['0'] = migraphx.to_gpu(migraphx.argument(image))
-
-        result = np.array(migraphx.from_gpu(model.run(params)),copy=False)
+        params['0'] = migraphx.argument(image)
+        result = np.array(model.run(params)[0])
 
         idx = np.argmax(result[0])
 

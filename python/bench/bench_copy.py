@@ -115,13 +115,15 @@ elif framework == 'migraphx':
     image = load_image(image_file,batch)
     for i in range(repeat):    
         params['input'] = migraphx.argument(image)
-        result = np.array(graph.run(params),copy=False)
+#        result = np.array(graph.run(params),copy=False)
+        result = graph.run(params)
     start_time = time.time()
     for i in range(repeat):    
         params['input'] = migraphx.argument(image)
-        result = np.array(graph.run(params),copy=False)
+#        result = np.array(graph.run(params),copy=False)
+        result = graph.run(params)
     finish_time = time.time()
-    idx = np.argmax(result[0])
+    idx = np.argmax(result[0])    
     print('MIGraphX: ')    
     print('IDX  = ',idx)
     print('Time = ', '{:8.3f}'.format(finish_time - start_time))
