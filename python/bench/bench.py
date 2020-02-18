@@ -12,7 +12,9 @@ parser.add_argument("--model",choices=('resnet50v1','resnet50v2','inceptionv3','
 parser.add_argument("--save_file",type=str)
 parser.add_argument("--image_file",type=str)
 parser.add_argument("--resize_val",type=int,default=224)
-parser.add_argument("--repeat",default=1000)
+parser.add_argument("--fp16",action='store_true')
+parser.add_argument("--repeat",type=int,default=1000)
+parser.add_argument("--batch",default=0)
 args=parser.parse_args()
 
 framework=args.framework
@@ -21,6 +23,8 @@ image_file=args.image_file
 resize_val=args.resize_val
 model=args.model
 repeat=args.repeat
+fp16=args.fp16
+batch=args.batch
 
 def tf_load_graph(save_file):
     # load the graph
@@ -45,20 +49,24 @@ def load_image(image_file,batch=1):
     print('batch shape=',np.shape(batch_np_img_nchw))    
     return batch_np_img_nchw
 
-if model == 'resnet50v1':
-    batch = 64
-elif model == 'resnet50v2':
-    batch = 64
-elif model == 'inceptionv3':
-    batch = 32
-elif model == 'vgg16':
-    batch = 16
-elif model == 'mobilenet':
-    batch = 64
+if batch == 0:
+    if model == 'resnet50v1':
+        batch = 64
+    elif model == 'resnet50v2':
+        batch = 64
+    elif model == 'inceptionv3':
+        batch = 32
+    elif model == 'vgg16':
+        batch = 16
+    elif model == 'mobilenet':
+        batch = 64
 
 if framework == 'tensorflow':
     import tensorflow as tf
     graph = tf_load_graph(save_file)
+    if fp16:
+        opt = tf.keras.optimizers.SGD()
+        opt = tf.train.experimental.enable_mixed_precision_graph_rewrite(opt)
 
     # for op in graph.get_operations():
     #    print(op.name)

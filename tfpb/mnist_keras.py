@@ -9,6 +9,7 @@
 # writing the saved configuration.
 
 import tensorflow as tf
+tf.keras.mixed_precision.experimental.set_policy('mixed_float16')
 mnist = tf.keras.datasets.mnist
 
 (x_train, y_train),(x_test, y_test) = mnist.load_data()

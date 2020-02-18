@@ -12,6 +12,7 @@ parser.add_argument("--model",choices=('resnet50v1','resnet50v2','inceptionv3','
 parser.add_argument("--save_file",type=str)
 parser.add_argument("--image_file",type=str)
 parser.add_argument("--resize_val",type=int,default=224)
+parser.add_argument("--fp16",action='store_true')
 parser.add_argument("--repeat",default=1000)
 args=parser.parse_args()
 
@@ -21,6 +22,7 @@ image_file=args.image_file
 resize_val=args.resize_val
 model=args.model
 repeat=args.repeat
+fp16=args.fp16
 
 def tf_load_graph(save_file):
     # load the graph
@@ -99,6 +101,8 @@ if framework == 'tensorflow':
 elif framework == 'migraphx':
     import migraphx
     graph = migraphx.parse_tf(save_file)
+    if fp16:
+        graph.quantize_fp16()    
     graph.compile(migraphx.get_target("gpu"),offload_copy=False)
     # allocate space with random params
     params = {}

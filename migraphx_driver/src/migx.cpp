@@ -17,6 +17,7 @@
  *
  * More details about each of these options found with usage statement below.
  */
+#define HACK 1
 #include <iostream>
 #include <fstream>
 #include <iomanip>
@@ -580,7 +581,7 @@ int main(int argc,char *const argv[],char *const envp[]){
   }
 
   migraphx::argument result;
-  migraphx::argument resarg;
+  std::vector<migraphx::argument> resarg;
   double start_time,finish_time,elapsed_time;
   int top5[5];
   // alternatives for running the program
@@ -606,7 +607,7 @@ int main(int argc,char *const argv[],char *const envp[]){
 	resarg = prog.eval(pmap);
 	ctx.finish();
 	if (copyarg)
-	  result = migraphx::gpu::from_gpu(resarg);
+	  result = migraphx::gpu::from_gpu(resarg[0]);
       } else {
 	resarg = prog.eval(pmap);
 	ctx.finish();
@@ -635,9 +636,10 @@ int main(int argc,char *const argv[],char *const envp[]){
     }
     if (is_gpu){
       resarg = prog.eval(pmap);
-      result = migraphx::gpu::from_gpu(resarg);
+      result = migraphx::gpu::from_gpu(resarg[0]);
     } else {
-      result = prog.eval(pmap);
+      resarg = prog.eval(pmap);
+      result = resarg[0];
     }
     if (result.get_shape().elements() == 1001){
       // skip 1st label
@@ -676,11 +678,12 @@ int main(int argc,char *const argv[],char *const envp[]){
 	  pmap[argname] = migraphx::gpu::to_gpu(migraphx::argument{
 	      pmap[argname].get_shape(),image_alloc.data()});
 	  resarg = prog.eval(pmap);
-	  result = migraphx::gpu::from_gpu(resarg);
+	  result = migraphx::gpu::from_gpu(resarg[0]);
 	} else {
 	  pmap[argname] = migraphx::argument{
 	    pmap[argname].get_shape(),image_alloc.data()};
-	  result = prog.eval(pmap);
+	  resarg = prog.eval(pmap);
+	  result = resarg[0];
 	}
 	if (result.get_shape().elements() == 1001){
 	  image_top5(((float *) result.data())+1, top5);
@@ -760,9 +763,11 @@ int main(int argc,char *const argv[],char *const envp[]){
 	// evaluate result
 	migraphx::argument result{};
 	if (is_gpu){
-	  result = migraphx::gpu::from_gpu(prog.eval(pmap));
+	  resarg = prog.eval(pmap);
+	  result = migraphx::gpu::from_gpu(resarg[0]);
 	} else {
-	  result = prog.eval(pmap);
+	  resarg = prog.eval(pmap);
+	  result = resarg[0];
 	}
 	std::vector<float> vec_output;
 	result.visit([&](auto output){ vec_output.assign(output.begin(),output.end()); });
@@ -804,11 +809,12 @@ int main(int argc,char *const argv[],char *const envp[]){
 	  pmap[argname] = migraphx::gpu::to_gpu(migraphx::argument{
 	      pmap[argname].get_shape(),image_data.data()});
 	  resarg = prog.eval(pmap);
-	  result = migraphx::gpu::from_gpu(resarg);
+	  result = migraphx::gpu::from_gpu(resarg[0]);
 	} else {
 	  pmap[argname] = migraphx::argument{
 	    pmap[argname].get_shape(),image_data.data()};
-	  result = prog.eval(pmap);	  
+	  resarg = prog.eval(pmap);
+	  result = resarg[0];
 	}
 	label_result = (float *) result.data();
 	int maxidx=0;
@@ -854,9 +860,10 @@ int main(int argc,char *const argv[],char *const envp[]){
     // evaluate
     if (is_gpu){
       resarg = prog.eval(pmap);
-      result = migraphx::gpu::from_gpu(resarg);
+      result = migraphx::gpu::from_gpu(resarg[0]);
     } else {
-      result = prog.eval(pmap);
+      resarg = prog.eval(pmap);
+      result = resarg[0];
     }
     std::cout << result << std::endl;
     
