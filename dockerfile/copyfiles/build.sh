@@ -20,7 +20,7 @@ make install
 cd /src/
 git clone https://github.com/protocolbuffers/protobuf
 cd protobuf
-git checkout v3.2.1
+git checkout v3.11.0
 git submodule update --init --recursive
 ./autogen.sh
 ./configure
