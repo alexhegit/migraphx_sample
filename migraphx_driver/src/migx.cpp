@@ -17,7 +17,6 @@
  *
  * More details about each of these options found with usage statement below.
  */
-#define HACK 1
 #include <iostream>
 #include <fstream>
 #include <iomanip>
@@ -35,6 +34,7 @@
 #include <migraphx/context.hpp>
 #include <migraphx/quantization.hpp>
 #include "migx.hpp"
+#define MIGRAPHX_NO_MULTIPLE 1
 using namespace migraphx;
 std::string migx_program; // argv[0] of this process
 std::string usage_message =
@@ -339,10 +339,15 @@ int main(int argc,char *const argv[],char *const envp[]){
     }
   } else if (model_type == model_tfpb){
     try {
+#if MIGRAPHX_NO_MULTIPLE
+      prog = parse_tf(model_filename,is_nhwc);
+#else
       struct tf_options tf_opt;
+
       tf_opt.is_nhwc = is_nhwc;
       tf_opt.batch_size = 1;
       prog = parse_tf(model_filename,tf_opt);
+#endif
     } catch( std::exception &exc){
       std::cerr << exc.what();
     } catch(...){
@@ -353,9 +358,7 @@ int main(int argc,char *const argv[],char *const envp[]){
 
   // quantize the program
   if (quantization_type == quantization_fp16){
-#if HACK
     quantize_fp16(prog)
-#endif
       ;
   } else if (quantization_type == quantization_int8){
 #if 0
@@ -373,12 +376,10 @@ int main(int argc,char *const argv[],char *const envp[]){
     std::vector<migraphx::program::parameter_map> calibration;
 #endif
 
-#if HACK
     if (is_gpu)
       quantize_int8(prog,migraphx::gpu::target{},calibration);      
     else
       quantize_int8(prog,migraphx::cpu::target{},calibration);
-#endif
   } else
     if (quantization_type != quantization_none){
     std::cerr << "quantization not yet implemented" << std::endl;
@@ -581,7 +582,11 @@ int main(int argc,char *const argv[],char *const envp[]){
   }
 
   migraphx::argument result;
+#if MIGRAPHX_NO_MULTIPLE
+  migraphx::argument resarg;
+#else
   std::vector<migraphx::argument> resarg;
+#endif
   double start_time,finish_time,elapsed_time;
   int top5[5];
   // alternatives for running the program
@@ -607,7 +612,11 @@ int main(int argc,char *const argv[],char *const envp[]){
 	resarg = prog.eval(pmap);
 	ctx.finish();
 	if (copyarg)
+#if MIGRAPHX_NO_MULTIPLE
+	  result = migraphx::gpu::from_gpu(resarg);	  
+#else
 	  result = migraphx::gpu::from_gpu(resarg[0]);
+#endif	
       } else {
 	resarg = prog.eval(pmap);
 	ctx.finish();
@@ -636,10 +645,18 @@ int main(int argc,char *const argv[],char *const envp[]){
     }
     if (is_gpu){
       resarg = prog.eval(pmap);
+#if MIGRAPHX_NO_MULTIPLE
+      result = migraphx::gpu::from_gpu(resarg);      
+#else
       result = migraphx::gpu::from_gpu(resarg[0]);
+#endif
     } else {
       resarg = prog.eval(pmap);
+#if MIGRAPHX_NO_MULTIPLE
+      result = resarg;
+#else
       result = resarg[0];
+#endif
     }
     if (result.get_shape().elements() == 1001){
       // skip 1st label
@@ -678,12 +695,20 @@ int main(int argc,char *const argv[],char *const envp[]){
 	  pmap[argname] = migraphx::gpu::to_gpu(migraphx::argument{
 	      pmap[argname].get_shape(),image_alloc.data()});
 	  resarg = prog.eval(pmap);
+#if MIGRAPHX_NO_MULTIPLE
+	  result = migraphx::gpu::from_gpu(resarg);	  
+#else
 	  result = migraphx::gpu::from_gpu(resarg[0]);
+#endif
 	} else {
 	  pmap[argname] = migraphx::argument{
 	    pmap[argname].get_shape(),image_alloc.data()};
 	  resarg = prog.eval(pmap);
+#if MIGRAPHX_NO_MULTIPLE
+	  result = resarg;
+#else
 	  result = resarg[0];
+#endif
 	}
 	if (result.get_shape().elements() == 1001){
 	  image_top5(((float *) result.data())+1, top5);
@@ -764,10 +789,18 @@ int main(int argc,char *const argv[],char *const envp[]){
 	migraphx::argument result{};
 	if (is_gpu){
 	  resarg = prog.eval(pmap);
+#if MIGRAPHX_NO_MULTIPLE
+	  result = migraphx::gpu::from_gpu(resarg);	  
+#else
 	  result = migraphx::gpu::from_gpu(resarg[0]);
+#endif
 	} else {
 	  resarg = prog.eval(pmap);
+#if MIGRAPHX_NO_MULTIPLE
+	  result = resarg;
+#else
 	  result = resarg[0];
+#endif
 	}
 	std::vector<float> vec_output;
 	result.visit([&](auto output){ vec_output.assign(output.begin(),output.end()); });
@@ -809,12 +842,20 @@ int main(int argc,char *const argv[],char *const envp[]){
 	  pmap[argname] = migraphx::gpu::to_gpu(migraphx::argument{
 	      pmap[argname].get_shape(),image_data.data()});
 	  resarg = prog.eval(pmap);
+#if MIGRAPHX_NO_MULTIPLE
+	  result = migraphx::gpu::from_gpu(resarg);	  
+#else
 	  result = migraphx::gpu::from_gpu(resarg[0]);
+#endif
 	} else {
 	  pmap[argname] = migraphx::argument{
 	    pmap[argname].get_shape(),image_data.data()};
 	  resarg = prog.eval(pmap);
+#if MIGRAPHX_NO_MULTIPLE
+	  result = resarg;
+#else
 	  result = resarg[0];
+#endif
 	}
 	label_result = (float *) result.data();
 	int maxidx=0;
@@ -860,10 +901,18 @@ int main(int argc,char *const argv[],char *const envp[]){
     // evaluate
     if (is_gpu){
       resarg = prog.eval(pmap);
+#if MIGRAPHX_NO_MULTIPLE
+      result = migraphx::gpu::from_gpu(resarg);      
+#else
       result = migraphx::gpu::from_gpu(resarg[0]);
+#endif
+
     } else {
       resarg = prog.eval(pmap);
+#if MIGRAPHX_NO_MULTIPLE
+#else
       result = resarg[0];
+#endif
     }
     std::cout << result << std::endl;
     
