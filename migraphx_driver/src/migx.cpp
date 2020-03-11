@@ -34,7 +34,7 @@
 #include <migraphx/context.hpp>
 #include <migraphx/quantization.hpp>
 #include "migx.hpp"
-#define MIGRAPHX_NO_MULTIPLE 1
+#define MIGRAPHX_NO_MULTIPLE 0
 using namespace migraphx;
 std::string migx_program; // argv[0] of this process
 std::string usage_message =
